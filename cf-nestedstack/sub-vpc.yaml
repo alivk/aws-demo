@@ -1,6 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: AWS CloudFormation workshop - Nested stacks - VPC template.
+Description: >
+  Name: cf-nestedstack
+  Use: alick-demo
+  Technology: cloudformation
+  Purpose: Nested stacks - VPC template
 
 Parameters:
   AvailabilityZones:

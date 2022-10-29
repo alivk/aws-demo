@@ -1,6 +1,10 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: AWS CloudFormation workshop - Nested stacks - Root template (uksb-1q9p31idr).
+Description: >
+  Name: cf-nestedstack
+  Use: alick-demo
+  Technology: cloudformation
+  Purpose: Nested stacks - Root template
 
 Parameters:
   S3BucketName:
