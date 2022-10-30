@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: >
+  Name: cf-layeredstack
+  Use: alick-demo
+  Technology: cloudformation
+  Purpose: Nested stacks - IAM template
+
+Resources:
+  SSMIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  WebServerInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref SSMIAMRole
+
+Outputs:
+  WebServerInstanceProfile:
+    Value: !Ref WebServerInstanceProfile
+    Export:
+      Name: cf-layeredstack-WebServerInstanceProfile

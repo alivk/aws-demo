@@ -68,23 +68,23 @@ Resources:
         PublicSubnet1Cidr: !Ref PublicSubnet1Cidr
         PublicSubnet2Cidr: !Ref PublicSubnet2Cidr
 
-#  IamStack:
-#    Type: AWS::CloudFormation::Stack
-#    Properties:
-#      TemplateURL: !Sub https://${S3BucketName}.s3.amazonaws.com/sub-iam.yaml
-#      TimeoutInMinutes: 10
+  IamStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${S3BucketName}.s3.amazonaws.com/sub-iam.yaml
+      TimeoutInMinutes: 10
 
-#  EC2Stack:
-#    Type: AWS::CloudFormation::Stack
-#    Properties:
-#      TemplateURL: !Sub https://${S3BucketName}.s3.amazonaws.com/sub-ec2.yaml
-#      TimeoutInMinutes: 20
-#      Parameters:
-#        EnvironmentType: !Ref EnvironmentType
-#        VpcId: !GetAtt VpcStack.Outputs.VpcId
-#        SubnetId: !GetAtt VpcStack.Outputs.PublicSubnet1
-#        WebServerInstanceProfile: !GetAtt IamStack.Outputs.WebServerInstanceProfile
+  EC2Stack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://${S3BucketName}.s3.amazonaws.com/sub-ec2.yaml
+      TimeoutInMinutes: 20
+      Parameters:
+        EnvironmentType: !Ref EnvironmentType
+        VpcId: !GetAtt VpcStack.Outputs.VpcId
+        SubnetId: !GetAtt VpcStack.Outputs.PublicSubnet1
+        WebServerInstanceProfile: !GetAtt IamStack.Outputs.WebServerInstanceProfile
 
-#Outputs:
-#  WebsiteURL:
-#    Value: !GetAtt EC2Stack.Outputs.WebsiteURL
+Outputs:
+  WebsiteURL:
+    Value: !GetAtt EC2Stack.Outputs.WebsiteURL
