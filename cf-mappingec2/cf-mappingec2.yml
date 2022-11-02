@@ -55,7 +55,7 @@ Resources:
         - RegionMap
         - !Ref 'AWS::Region'
         - AMI
-      SecurityGroupIds:
+      SecurityGroups:
         - !Ref EC2InstanceSG
       UserData:
         'Fn::Base64': !Sub |
@@ -74,9 +74,7 @@ Resources:
         - Key: Name
           Value: !Sub ${AWS::StackName}
         SecurityGroupIngress:
-          -
-            Description: Permits HTTP traffic to validate that the installed webserver is operational.
-            CidrIp: !Ref SourceAccessCIDR
+          - CidrIp: !Ref SourceAccessCIDR
             FromPort: 80
             IpProtocol: tcp
             ToPort: 80
