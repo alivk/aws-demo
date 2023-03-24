@@ -1,0 +1,11 @@
+[
+  { "ParameterKey": "DBName",                 "ParameterValue": "wordpressdb" },
+  { "ParameterKey": "DBUser",                 "ParameterValue": "wordpressdb" },
+  { "ParameterKey": "DBPassword",             "ParameterValue": "needtochange" },
+  { "ParameterKey": "DBRootPassword",         "ParameterValue": "needtochange" },
+  { "ParameterKey": "InstanceType",           "ParameterValue": "t2.small" },
+  { "ParameterKey": "KeyName",                "ParameterValue": "management" },
+  { "ParameterKey": "RoleName",               "ParameterValue": "ROLE-SSMAdminAccess" },
+  { "ParameterKey": "HTTPLocation",           "ParameterValue": "132.147.0.0/16" },
+  { "ParameterKey": "SSHLocation",            "ParameterValue": "132.147.0.0/16" }
+]

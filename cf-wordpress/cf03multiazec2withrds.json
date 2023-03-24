@@ -1,14 +1,15 @@
 [
+  { "ParameterKey": "VpcId",                            "ParameterValue": "vpc-0bcfd5f4c10fa74f6" },
+  { "ParameterKey": "Subnets",                          "ParameterValue": "subnet-0c7bcf36809b0ed9b,subnet-0a0e284e42a906b9d" },
   { "ParameterKey": "DBAllocatedStorage",               "ParameterValue": "5" },
   { "ParameterKey": "DBClass",                          "ParameterValue": "db.t2.small" },
   { "ParameterKey": "DBName",                           "ParameterValue": "wordpressdb" },
   { "ParameterKey": "DBUser",                           "ParameterValue": "wordpressdb" },
-  { "ParameterKey": "DBPassword",                       "ParameterValue": "wordpressdb" },
+  { "ParameterKey": "DBPassword",                       "ParameterValue": "needtochange" },
   { "ParameterKey": "InstanceType",                     "ParameterValue": "t2.small" },
   { "ParameterKey": "KeyName",                          "ParameterValue": "management" },
   { "ParameterKey": "MultiAZDatabase",                  "ParameterValue": "true" },
-  { "ParameterKey": "SSHLocation",                      "ParameterValue": "true" },
-  { "ParameterKey": "Subnets",                          "ParameterValue": ["subnet-0c7bcf36809b0ed9b","subnet-0a0e284e42a906b9d"] },
-  { "ParameterKey": "VpcId",                            "ParameterValue": "vpc-0bcfd5f4c10fa74f6" },
-  { "ParameterKey": "WebServerCapacity",                "ParameterValue": "1" }
+  { "ParameterKey": "WebServerCapacity",                "ParameterValue": "1" },
+  { "ParameterKey": "HTTPLocation",                     "ParameterValue": "132.147.0.0/16" },
+  { "ParameterKey": "SSHLocation",                      "ParameterValue": "132.147.0.0/16" }
 ]

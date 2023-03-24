@@ -1,14 +1,12 @@
----
 AWSTemplateFormatVersion: '2010-09-09'
-Description: 'AWS CloudFormation Sample Template WordPress_Single_Instance_With_RDS:
-  WordPress is web software you can use to create a website or blog. This template
-  installs a single-instance WordPress deployment that uses an Amazon RDS database
-  instance for storage. It demonstrates using the AWS CloudFormation bootstrap scripts
-  to install packages and files when an instance is launched. **WARNING** This template
-  creates an Amazon EC2 instance and an Amazon RDS database instance. You will be
-  billed for the AWS resources used if you create a stack from this template.'
+Description: >
+  Name: cf-SingleEC2WithRDS
+  Use: alick-demo
+  Technology: cloudformation|EC2|RDS
+  Purpose: create a beautiful website or blog in one EC2 and one RDS instance
 Parameters:
   KeyName:
+    Default: managment
     Description: Name of an existing EC2 KeyPair to enable SSH access to the instances
     Type: String
     MinLength: '1'
@@ -16,9 +14,9 @@ Parameters:
     AllowedPattern: "[\\x20-\\x7E]*"
     ConstraintDescription: can contain only ASCII characters.
   InstanceType:
+    Default: t2.small
     Description: WebServer EC2 instance type
     Type: String
-    Default: t1.micro
     AllowedValues:
     - t1.micro
     - t2.micro
@@ -29,6 +27,11 @@ Parameters:
     - m3.xlarge
     - m3.2xlarge
     ConstraintDescription: must be a valid EC2 instance type.
+  RoleName:
+    Default: ROLE-SSMAdminAccess
+    Description: EC2 role name
+    Type: String
+    ConstraintDescription: Please specify your IAM role for EC2
   DBClass:
     Default: db.t1.micro
     Description: Database instance class
@@ -79,11 +82,20 @@ Parameters:
     MaxValue: '1024'
     ConstraintDescription: must be between 5 and 1024Gb.
   SSHLocation:
+    Default: 0.0.0.0/0
     Description: " The IP address range that can be used to SSH to the EC2 instances"
     Type: String
     MinLength: '9'
     MaxLength: '18'
     Default: 0.0.0.0/0
+    AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+  HTTPLocation:
+    Default: '0.0.0.0/0'
+    Description: The IP address range that can be used to HTTP to the EC2 instances
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
     AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
     ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
 Mappings:
@@ -136,6 +148,27 @@ Mappings:
       PV64: ami-cab82af3
       HVM64: ami-ccb82af5
 Resources:
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access via port 80 and SSH access
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp:
+          Ref: HTTPLocation
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp:
+          Ref: SSHLocation
+  WebServerInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: RoleName
   WebServer:
     Type: AWS::EC2::Instance
     Metadata:
@@ -198,6 +231,7 @@ Resources:
         Ref: InstanceType
       SecurityGroups:
       - Ref: WebServerSecurityGroup
+      IamInstanceProfile: !Ref WebServerInstanceProfile
       KeyName:
         Ref: KeyName
       UserData:
@@ -246,6 +280,9 @@ Resources:
             - 'echo "require_once(ABSPATH . ''wp-settings.php'');" >> $wp_config
 
               '
+      Tags:
+        - Key: Name
+          Value: !Ref 'AWS::StackName'
   WaitHandle:
     Type: AWS::CloudFormation::WaitConditionHandle
   WaitCondition:
@@ -255,6 +292,13 @@ Resources:
       Handle:
         Ref: WaitHandle
       Timeout: '600'
+  DBSecurityGroup:
+    Type: AWS::RDS::DBSecurityGroup
+    Properties:
+      DBSecurityGroupIngress:
+        EC2SecurityGroupName:
+          Ref: WebServerSecurityGroup
+      GroupDescription: Frontend Access
   DBInstance:
     Type: AWS::RDS::DBInstance
     Properties:
@@ -271,27 +315,6 @@ Resources:
         Ref: DBAllocatedStorage
       MasterUserPassword:
         Ref: DBPassword
-  DBSecurityGroup:
-    Type: AWS::RDS::DBSecurityGroup
-    Properties:
-      DBSecurityGroupIngress:
-        EC2SecurityGroupName:
-          Ref: WebServerSecurityGroup
-      GroupDescription: Frontend Access
-  WebServerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupDescription: Enable HTTP access via port 80 and SSH access
-      SecurityGroupIngress:
-      - IpProtocol: tcp
-        FromPort: '80'
-        ToPort: '80'
-        CidrIp: 0.0.0.0/0
-      - IpProtocol: tcp
-        FromPort: '22'
-        ToPort: '22'
-        CidrIp:
-          Ref: SSHLocation
 Outputs:
   WebsiteURL:
     Value:
