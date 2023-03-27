@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Name: cf-MultiAZEC2WithRDS
+  Name: cf-MultiAZEC2WithRDS Using Launch Configuration
   Use: alick-demo
   Technology: cloudformation|EC2|RDS|ALB
   Purpose: create a highly-available, scalable WordPress deployment using a multi-az Amazon RDS database
@@ -490,11 +490,11 @@ Resources:
   ApplicationLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: 'AWS::StackName'
+      Name: !Ref 'AWS::StackName'
       Subnets:
         Ref: Subnets
       SecurityGroups: 
-        Ref: ApplicationLoadBalancerSecurityGroup
+        - !Ref ApplicationLoadBalancerSecurityGroup
       Tags:
         - Key: Name
           Value: !Ref 'AWS::StackName'
@@ -555,7 +555,7 @@ Resources:
           Ref: SSHLocation
       VpcId:
         Ref: VpcId
-  WebServerGroup:
+  WebServerAutoScalingGroup:
     Type: AWS::AutoScaling::AutoScalingGroup
     Properties:
       VPCZoneIdentifier:
@@ -564,6 +564,10 @@ Resources:
         Ref: LaunchConfig
       MinSize: '1'
       MaxSize: '5'
+      Tags:
+        - Key: Name
+          Value: !Join ['', ['MultiAZEC2WithRDS-MyAutoScaledInstance-', !Select [0, !Split ['-', !Ref 'AWS::StackId']]]]
+          PropagateAtLaunch: 'true'
       DesiredCapacity:
         Ref: WebServerCapacity
       TargetGroupARNs:
@@ -718,7 +722,7 @@ Resources:
             - "/opt/aws/bin/cfn-signal -e $? "
             - "         --stack "
             - Ref: AWS::StackName
-            - "         --resource WebServerGroup "
+            - "         --resource WebServerAutoScalingGroup "
             - "         --region "
             - Ref: AWS::Region
             - "\n"
