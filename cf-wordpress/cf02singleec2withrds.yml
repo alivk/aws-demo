@@ -130,8 +130,8 @@ Mappings:
       PV64: ami-672ce210
       HVM64: ami-892fe1fe
     ap-southeast-1:
-      PV64: ami-0ce792959cf41c394
-      HVM64: ami-0d29ebe69775a848a
+      PV64: ami-56b7eb04
+      HVM64: ami-0ba35dc9caf73d1c7
     ap-northeast-1:
       PV64: ami-25dd9324
       HVM64: ami-29dc9228
