@@ -1,0 +1,255 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Developing Serverless Solutions on AWS - Try-it-out Exercises - Day 1
+
+Resources:
+
+# Add in the Networking resources
+
+  LabVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: Lab VPC
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref LabVPC
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    DependsOn: AttachGateway
+    Properties:
+      VpcId: !Ref LabVPC
+      CidrBlock: 10.0.1.0/24
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select
+        - 0
+        - !GetAZs
+      Tags:
+        - Key: Name
+          Value: Public Subnet
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    DependsOn: PublicSubnet
+    Properties:
+      VpcId: !Ref LabVPC
+      Tags:
+        - Key: Name
+          Value: Public Route Table
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    DependsOn: PublicRoute
+    Properties:
+      SubnetId: !Ref PublicSubnet
+      RouteTableId: !Ref PublicRouteTable
+
+# Remaining Resources
+  TryItOutDevEnv:
+    DependsOn: PublicSubnetRouteTableAssociation
+    Type: AWS::Cloud9::EnvironmentEC2
+    Properties:
+      InstanceType: 't3.small'
+      Description: IDE to handle all the project activities
+      SubnetId: !Ref PublicSubnet
+      AutomaticStopTimeMinutes: 90
+
+# PreBuilt HTTP API Section
+  BakeryHTTPApi:
+    Type: "AWS::ApiGatewayV2::Api"
+    Properties:
+      Name: "Bakery-Sample-Api"
+      ApiKeySelectionExpression: "$request.header.x-api-key"
+      ProtocolType: "HTTP"
+      RouteSelectionExpression: "$request.method $request.path"
+      DisableExecuteApiEndpoint: false
+
+  BakeryHTTPApiDefaultStage:
+    Type: "AWS::ApiGatewayV2::Stage"
+    Properties:
+      StageName: "$default"
+      StageVariables: {}
+      ApiId: !Ref BakeryHTTPApi
+      RouteSettings: {}
+      DefaultRouteSettings:
+        DetailedMetricsEnabled: false
+      AutoDeploy: true
+
+  BakeryHTTPApiDevStage:
+    Type: "AWS::ApiGatewayV2::Stage"
+    Properties:
+      StageName: "dev"
+      StageVariables: {}
+      ApiId: !Ref BakeryHTTPApi
+      RouteSettings: {}
+      DefaultRouteSettings:
+        DetailedMetricsEnabled: false
+      AutoDeploy: true
+
+  BakeryHTTPApiRoute:
+    Type: "AWS::ApiGatewayV2::Route"
+    DependsOn: BakeryHTTPApiIntegration
+    Properties:
+      ApiId: !Ref BakeryHTTPApi
+      ApiKeyRequired: false
+      AuthorizationType: "NONE"
+      RouteKey: "GET /snackpick"
+      Target: !Sub "integrations/${BakeryHTTPApiIntegration}"
+
+  BakeryHTTPApiIntegration:
+    Type: "AWS::ApiGatewayV2::Integration"
+    DependsOn: BakeryFunction
+    Properties:
+      ApiId: !Ref BakeryHTTPApi
+      ConnectionType: "INTERNET"
+      IntegrationMethod: "POST"
+      IntegrationType: "AWS_PROXY"
+      IntegrationUri: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:bakeryFunction"
+      TimeoutInMillis: 30000
+      PayloadFormatVersion: "2.0"
+
+  TryItOutBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  DonutDLQ:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "donut-dlq"
+
+  BakeryFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: "bakeryFunction"
+      Runtime: nodejs16.x
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Handler: index.handler
+      Timeout: 30
+      Code:
+        ZipFile: |
+          let bakery = ["Tart", "Bagel", "Brownie", "Cronut", "Pastry", "Loaf bread", 
+            "Cookie", "Croissant", "Cake", "Cheesecake", "Pie", "Muffin", "Pretzel", "Doughnut", 
+            "Danish", "Sweet roll", "Cinnamon roll", "Coffee cake"];
+
+          exports.handler = async (event, context) => {
+              console.log("Event", JSON.stringify(event));
+              var len = bakery.length;
+              var idx = getRandomArbitrary(0, len-1);
+              var snack = bakery[idx];
+              console.log("next snack:", snack);
+                  
+              const response = {
+                  statusCode: 200,
+                  headers: {
+                    'Content-Type': 'text/html',
+                  },
+                  body: "<html><b>Here is my next snack pick: </b><i>"+ snack + "</i> <br><i>(Refresh the page for the next pick)</i></html>",
+              };
+              return response;
+          };
+
+          function getRandomArbitrary(min, max) {
+            return  Math.floor(Math.random() * (max - min) + min);
+          }
+
+  PieFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: "pieFunction"
+      Runtime: nodejs16.x
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Handler: index.handler
+      Timeout: 30
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+              console.log("Event", JSON.stringify(event));
+          };
+
+  DonutFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: "donutFunction"
+      Runtime: nodejs16.x
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Handler: index.handler
+      Timeout: 30
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+              console.log("Event", JSON.stringify(event));
+          };
+
+  # IAM Section
+  APIGatewayInvocationRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: APIGatewayInvocationRole
+      Path: /service-role/
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+        - arn:aws:iam::aws:policy/AmazonEventBridgeFullAccess
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - "sts:AssumeRole"
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "apigateway.amazonaws.com"
+
+  LambdaExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole
+        - arn:aws:iam::aws:policy/AmazonEventBridgeFullAccess
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Action:
+              - "sts:AssumeRole"
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+      Policies:
+        - PolicyName: AWSLambdaExecutionPolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                  - "sqs:*"
+                  - "sns:Publish"
+                Resource: "*"
+Outputs:
+  Region:
+    Value: !Ref 'AWS::Region'
+  APIGatewayInvocationRole:
+    Value: !GetAtt APIGatewayInvocationRole.Arn
