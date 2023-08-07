@@ -72,7 +72,7 @@ func audioToText(sourceBucketName, fileName string) error {
 	_, err := transcribeClient.StartTranscriptionJob(context.Background(), &transcribe.StartTranscriptionJobInput{
 		TranscriptionJobName: &jobName,
 		LanguageCode:         types.LanguageCode(languageCode),
-		MediaFormat:          types.MediaFormatMp3,
+		MediaFormat:          types.MediaFormatMp4,
 		Media: &types.Media{
 			MediaFileUri: &inputFile,
 		},
