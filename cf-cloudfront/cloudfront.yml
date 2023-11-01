@@ -1,0 +1,496 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Parameters:
+  BucketName:
+    Type: String
+    Default: 'alick-saopaulo-public'
+  BucketRegion:
+    Type: String
+    Default: 'sa-east-1'
+
+Resources:
+  CreateCloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        Origins:
+          - DomainName: !Sub '${BucketName}.s3-website-${BucketRegion}.amazonaws.com'
+            Id: S3WebsiteOrigin
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: http-only
+        DefaultCacheBehavior:
+          TargetOriginId: S3WebsiteOrigin
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          Compress: true
+          DefaultTTL: 86400
+          MaxTTL: 31536000
+          MinTTL: 0
+          ForwardedValues:
+            QueryString: false
+            Cookies:
+              Forward: none
+  EventBridgeScheduleToCheck:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Trigger the DistributionStatusCheckerFunction every one minute"
+      ScheduleExpression: "rate(1 minute)"
+      State: "ENABLED"
+      Targets:
+        - Arn: !GetAtt DistributionStatusCheckerFunction.Arn
+          Id: "TargetId1"
+  PermissionForEventsToInvokeLambda:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref DistributionStatusCheckerFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt EventBridgeScheduleToCheck.Arn
+  DistributionStatusCheckerFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Runtime: python3.11
+      Timeout: 300
+      Role: !GetAtt CreateLambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import boto3
+          import time
+          import cfnresponse
+          
+          def handler(event, context):
+              client = boto3.client('cloudfront')
+              distribution_id = event['ResourceProperties']['DistributionId']
+              while True:
+                  response = client.get_distribution(Id=distribution_id)
+                  if response['Distribution']['Status'] == 'Deployed':
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                      break
+  DistributionStatusChecker:
+    Type: Custom::DistributionStatusChecker
+    Properties:
+      ServiceToken: !GetAtt DistributionStatusCheckerFunction.Arn
+      DistributionId: !Ref CreateCloudFrontDistribution
+  CreateLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: RunningPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudfront:GetDistribution
+                  - s3:*
+                  - states:StartExecution
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: '*'
+  CreateIndexHtmlInS3:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Runtime: python3.11
+      Timeout: 900
+      Role: !GetAtt CreateLambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          BucketName: !Ref BucketName
+          BucketRegion: !Ref BucketRegion
+          CLOUDFRONT_URL: !Sub 'https://${CreateCloudFrontDistribution.DomainName}/moon-hi.jpeg'
+          ORIGIN_URL: !Sub 'https://${BucketName}.s3-website-${BucketRegion}.amazonaws.com/moon-hi.jpeg'
+      Code:
+        ZipFile: |
+          import boto3
+          import boto3
+          import os
+
+          def handler(event, context):
+              # Checking if 'RequestType' key exists, if not, it's a manual trigger
+              request_type = event.get('RequestType', 'Create')
+              html_content = get_html_content()
+              s3 = boto3.client('s3')
+              s3.put_object(
+                  Bucket=os.environ['BucketName'],
+                  Key='index.html',
+                  ContentType='text/html',
+                  Body=html_content,
+                  ACL='public-read'
+              )
+
+
+          def get_html_content():
+            html_content = """
+              <!DOCTYPE html>
+              <html lang="en">
+                  <head>
+                      <meta charset="UTF-8">
+                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                      <title>Load Image</title>
+                      <style>
+                          body {
+                              font-family: 'Arial', sans-serif;
+                              display: flex;
+                              flex-direction: column;
+                              align-items: center;
+                              justify-content: center;
+                              height: 100vh;
+                              background-color: #f3f4f6;
+                              color: #333;
+                          }
+                          #container {
+                              display: flex;
+                              justify-content: space-between;
+                              align-items: center;
+                              max-width: 800px;
+                              width: 100%;
+                              background-color: #ffffff;
+                              box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+                              padding: 20px;
+                              border-radius: 10px;
+                          }
+                          #info {
+                              width: 600px;
+                              display: flex;
+                              flex-direction: column;
+                              align-items: flex-start;
+                              justify-content: center;
+                              margin-left: 20px;
+                          }
+                          #imageContainer {
+                              width: 300px;
+                              display: flex;
+                              align-items: center;
+                              justify-content: center;
+                          }
+                          img {
+                              max-width: 100%;
+                              max-height: 100%;
+                              border-radius: 8px;
+                              transition: transform 0.3s;
+                          }
+                          img:hover {
+                              transform: scale(1.05);
+                          }
+                          #buttonContainer {
+                              display: flex;
+                              justify-content: space-between;
+                              max-width: 860px;
+                              width: 100%;
+                              margin: 20px 0 20px 0;
+                          }
+
+                          button {
+                              flex: 1;  
+                              margin: 0 10px; 
+                              padding: 10px;
+                              font-size: 16px;
+                              border: none;
+                              border-radius: 5px;
+                              color: #fff;
+                              background-color: #007BFF;
+                              cursor: pointer;
+                              transition: background-color 0.3s, transform 0.2s;
+                          }
+                          button:hover {
+                              background-color: #0056b3;
+                              transform: translateY(-2px);
+                          }
+                          p {
+                              margin: 8px 0;
+                              font-size: 16px;
+                          }
+                          #inputContainer {
+                              margin-bottom: 20px;
+                          }
+                          input {
+                              padding: 10px;
+                              border: 1px solid #ccc;
+                              border-radius: 5px;
+                              margin-right: 10px;
+                              width: 400px;
+                          }
+                          #updateButton {
+                              padding: 10px 20px;
+                              border: none;
+                              border-radius: 5px;
+                              background-color: #007BFF;
+                              color: #fff;
+                              cursor: pointer;
+                          }
+                      </style>
+                  </head>
+                  <body>
+                      <div id="buttonContainer">
+                          <input type="text" id="urlCloudFront" placeholder="Add CloudFront URL">
+                          <input type="text" id="urlS3Origin" placeholder="Add S3 Origin URL">
+                          <button id="updateButton" onclick="updateUrls()">Update</button>
+                      </div>
+                      <div id="container">
+                          <div id="imageContainer">
+                              <img id="image" src="" alt="High Resolution Image" style="display: none;">
+                          </div>
+                          <div id="info">
+                              <p>Origin Object Load Time: <span id="originLoadTime">N/A</span>ms</p>
+                              <p>Load Time: <span id="loadTime">N/A</span>ms</p>
+                              <p>Percentage faster: <span id="percentageFaster">N/A</span></p>
+                              <p>Cache-Control: <span id="Cache-Control">N/A</span></p>
+                              <p>Age: <span id="Age">N/A</span></p>
+                              <p>X-Cache: <span id="X-Cache">N/A</span></p>
+                              <p>X-amz-cf-pop: <span id="X-Amz-Cf-Pop">N/A</span></p>
+                          </div>
+                      </div>
+                      <div id="buttonContainer">
+                          <button onclick="imageLoader.loadOriginImage()">Load Origin Image</button>
+                          <button onclick="imageLoader.loadImage()">Load Cached Image</button>
+                      </div>
+
+                      <script>
+                          const imageLoader = {
+                              originLoadTime: null,
+                              urlCloudFront: 'https://d23lj0rp0jvey0.cloudfront.net',
+                              urlS3Origin: 'https://alick-saopaulo-public.s3-website-sa-east-1.amazonaws.com',
+
+                              updateUrls() {
+                                  const urlCloudFrontInput = document.getElementById('urlCloudFront').value;
+                                  const urlS3OriginInput = document.getElementById('urlS3Origin').value;
+
+                                  if (urlCloudFrontInput) this.urlCloudFront = urlCloudFrontInput;
+                                  if (urlS3OriginInput) this.urlS3Origin = urlS3OriginInput;
+
+                                  const cloudFrontUrl = `${this.urlCloudFront.startsWith('https://') ? '' : 'https://'}${this.urlCloudFront}/moon-hi.jpeg`;
+                                  const s3Url = `${this.urlS3Origin.startsWith('https://') ? '' : 'https://'}${this.urlS3Origin}/moon-hi.jpeg`;
+
+                                  this.loadImage(cloudFrontUrl);
+                                  this.loadOriginImage(s3Url);
+                              },
+
+                              async loadImage(cloudFrontUrl) {
+                                  await this.loadGenericImage(cloudFrontUrl, 'loadTime');
+                                  if (this.originLoadTime) {
+                                      const percentageFaster = ((this.originLoadTime - parseInt(document.getElementById('loadTime').innerText)) / this.originLoadTime) * 100;
+                                      document.getElementById('percentageFaster').innerText = `${percentageFaster.toFixed(2)}%`;
+                                  } else {
+                                      document.getElementById('percentageFaster').innerText = 'N/A';
+                                  }
+                              },
+
+                              async loadOriginImage(s3Url) {
+                                  this.originLoadTime = await this.loadGenericImage(s3Url, 'originLoadTime');
+                              },
+
+                              async loadGenericImage(url, loadTimeElementId) {
+                                  const img = document.getElementById('image');
+                                  const startTime = new Date().getTime();
+
+                                  try {
+                                      const response = await fetch(url);
+
+                                      if (!response.ok) {
+                                          throw new Error('Network response was not ok');
+                                      }
+
+                                      const imageData = await response.blob();
+                                      const objectURL = URL.createObjectURL(imageData);
+                                      img.src = objectURL;
+                                      // Extract headers from the response
+                                      const cacheControl = response.headers.get('Cache-Control');
+                                      const xCache = response.headers.get('X-Cache');
+                                      const xAmzCfPop = response.headers.get('X-Amz-Cf-Pop');
+                                      const age = response.headers.get('Age');
+
+                                      document.getElementById('Cache-Control').innerText = cacheControl || 'Not Available';
+                                      document.getElementById('X-Cache').innerText = xCache || 'Not Available';
+                                      document.getElementById('X-Amz-Cf-Pop').innerText = xAmzCfPop || 'Not Available';
+                                      document.getElementById('Age').innerText = age || 'Not Available';
+
+                                      return new Promise(resolve => {
+                                          img.onload = function() {
+                                              const endTime = new Date().getTime();
+                                              const loadTime = endTime - startTime;
+                                              document.getElementById(loadTimeElementId).innerText = loadTime;
+                                              img.style.display = 'block';
+                                              URL.revokeObjectURL(objectURL);
+                                              resolve(loadTime);
+                                          }
+                                      });
+                                  } catch (error) {
+                                      console.log('There has been a problem with your fetch operation:', error.message);
+                                      return null;
+                                  }
+                              }
+                          };
+
+                          document.getElementById('updateButton').addEventListener('click', () => imageLoader.updateUrls());
+                      </script>
+                  </body>
+              </html>
+              """
+            return html_content  # This line is added to return the HTML content
+  CreateLambdaS3StaticWebsite:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.handler
+      Runtime: python3.11
+      Timeout: 900
+      Role: !GetAtt CreateLambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          BucketName: !Ref BucketName  # Define the BucketName environment variable
+      Code:
+        ZipFile: |
+          import boto3
+          import logging
+          import os
+
+          logger = logging.getLogger()
+          logger.setLevel(logging.INFO)
+
+          def handler(event, context):
+            s3 = boto3.client('s3')
+            bucket_name = os.environ['BucketName']  # Retrieve the BucketName from environment variables
+
+            # Set the website configuration on the bucket
+            s3.put_bucket_website(
+                Bucket=bucket_name,
+                WebsiteConfiguration={
+                    'IndexDocument': {'Suffix': 'index.html'},
+                    'ErrorDocument': {'Key': 'error.html'},
+                }
+            )
+
+            # Set the bucket ACL to public-read to enable public access
+            s3.put_bucket_acl(Bucket=bucket_name, ACL='public-read')
+
+            # Iterate over the bucket objects and set ACL to public-read
+            bucket_objects = s3.list_objects_v2(Bucket=bucket_name)
+            if bucket_objects.get('Contents'):
+                for obj in bucket_objects['Contents']:
+                    s3.put_object_acl(Bucket=bucket_name, Key=obj['Key'], ACL='public-read')
+  StateMachineExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: ExecuteStateMachinePolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource: "*"
+  NetworkEssentialsWorkflowStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: NetworkEssentialsWorkflowStateMachine
+      DefinitionString: !Sub |
+        {
+          "StartAt": "CreateIndexHtmlInS3",
+          "States": {
+            "CreateIndexHtmlInS3": {
+              "Type": "Task",
+              "Resource": "${CreateIndexHtmlInS3.Arn}",
+              "Next": "CreateLambdaS3StaticWebsite"
+            },
+            "CreateLambdaS3StaticWebsite": {
+              "Type": "Task",
+              "Resource": "${CreateLambdaS3StaticWebsite.Arn}",
+              "End": true
+            }
+          }
+        }
+      RoleArn: !GetAtt StateMachineExecutionRole.Arn
+  StartStateMachineFunction:
+    Type: AWS::Lambda::Function
+    DependsOn: NetworkEssentialsWorkflowStateMachine
+    Properties:
+      Handler: index.handler
+      Runtime: python3.11
+      Timeout: 900
+      Role: !GetAtt CreateLambdaExecutionRole.Arn
+      Environment:
+        Variables:
+          STATE_MACHINE_NAME: "NetworkEssentialsWorkflowStateMachine"
+          AWS_ACCOUNT_ID: !Sub ${AWS::AccountId}
+          AWS_REGION_ID: !Sub ${AWS::Region}
+      Code:
+        ZipFile: |
+          import boto3
+          import cfnresponse
+          import os
+
+          def handler(event, context):
+              client = boto3.client('stepfunctions')
+              state_machine_arn = f'arn:aws:states:{os.environ["AWS_REGION_ID"]}:{os.environ["AWS_ACCOUNT_ID"]}:stateMachine:{os.environ["STATE_MACHINE_NAME"]}'
+              
+              try:
+                  if event['RequestType'] == 'Delete':
+                      # Delete state machine
+                      client.delete_state_machine(
+                          stateMachineArn=state_machine_arn
+                      )
+                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                      return
+                  
+                  # For create or update, first check if state machine exists and delete if necessary
+                  try:
+                      client.describe_state_machine(
+                          stateMachineArn=state_machine_arn
+                      )
+                      client.delete_state_machine(
+                          stateMachineArn=state_machine_arn
+                      )
+                  except client.exceptions.StateMachineDoesNotExist:
+                      pass  # State machine does not exist, proceed to create it
+
+                  # Create or update state machine
+                  response = client.start_execution(
+                      stateMachineArn=state_machine_arn,
+                      name='ExecutionFromCloudFormation',
+                  )
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+
+              except Exception as e:
+                  cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
+
+  StartStateMachineCustomResource:
+    Type: Custom::StartStateMachine
+    Properties:
+      ServiceToken: !GetAtt StartStateMachineFunction.Arn
+
+Outputs:
+  SpeedComparismWebsiteOrigin:
+    Description: 'This is the URL of the Speed Comparism Website.'
+    Value: !Sub '${BucketName}.s3-website-${BucketRegion}.amazonaws.com'
+  SpeedComparismWebsiteCloudFront:
+    Description: 'The domain name of the CloudFront distribution.'
+    Value: !GetAtt CreateCloudFrontDistribution.DomainName
