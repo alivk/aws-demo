@@ -124,7 +124,6 @@ Resources:
       Code:
         ZipFile: |
           import boto3
-          import boto3
           import os
 
           def handler(event, context):
@@ -132,14 +131,28 @@ Resources:
               request_type = event.get('RequestType', 'Create')
               html_content = get_html_content()
               s3 = boto3.client('s3')
+              bucket_name = os.environ['BucketName']
+              object_key = 'index.html'
+              
+              # Check if index.html exists in the bucket
+              try:
+                  s3.head_object(Bucket=bucket_name, Key=object_key)
+                  # If the above line doesn't throw an exception, the object exists, delete it
+                  s3.delete_object(Bucket=bucket_name, Key=object_key)
+              except s3.exceptions.ClientError as e:
+                  # If a NotFound error, the object doesn't exist, so proceed
+                  if e.response['Error']['Code'] != '404':
+                      # If it's some other error, re-raise the exception as it's unexpected
+                      raise
+              
+              # Now upload the new index.html file
               s3.put_object(
-                  Bucket=os.environ['BucketName'],
-                  Key='index.html',
+                  Bucket=bucket_name,
+                  Key=object_key,
                   ContentType='text/html',
                   Body=html_content,
                   ACL='public-read'
               )
-
 
           def get_html_content():
             html_content = """
