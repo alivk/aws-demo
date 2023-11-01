@@ -102,6 +102,8 @@ Resources:
                   - cloudfront:GetDistribution
                   - s3:*
                   - states:StartExecution
+                  - states:DescribeStateMachine
+                  - states:DeleteStateMachine
                   - logs:CreateLogGroup
                   - logs:CreateLogStream
                   - logs:PutLogEvents
