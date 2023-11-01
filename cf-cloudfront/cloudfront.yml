@@ -158,208 +158,186 @@ Resources:
             html_content = """
               <!DOCTYPE html>
               <html lang="en">
-                  <head>
-                      <meta charset="UTF-8">
-                      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                      <title>Load Image</title>
-                      <style>
-                          body {
-                              font-family: 'Arial', sans-serif;
-                              display: flex;
-                              flex-direction: column;
-                              align-items: center;
-                              justify-content: center;
-                              height: 100vh;
-                              background-color: #f3f4f6;
-                              color: #333;
-                          }
-                          #container {
-                              display: flex;
-                              justify-content: space-between;
-                              align-items: center;
-                              max-width: 800px;
-                              width: 100%;
-                              background-color: #ffffff;
-                              box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
-                              padding: 20px;
-                              border-radius: 10px;
-                          }
-                          #info {
-                              width: 600px;
-                              display: flex;
-                              flex-direction: column;
-                              align-items: flex-start;
-                              justify-content: center;
-                              margin-left: 20px;
-                          }
-                          #imageContainer {
-                              width: 300px;
-                              display: flex;
-                              align-items: center;
-                              justify-content: center;
-                          }
-                          img {
-                              max-width: 100%;
-                              max-height: 100%;
-                              border-radius: 8px;
-                              transition: transform 0.3s;
-                          }
-                          img:hover {
-                              transform: scale(1.05);
-                          }
-                          #buttonContainer {
-                              display: flex;
-                              justify-content: space-between;
-                              max-width: 860px;
-                              width: 100%;
-                              margin: 20px 0 20px 0;
-                          }
+              <head>
+                  <meta charset="UTF-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                  <title>Load Image</title>
+                  <style>
+                      body {
+                          font-family: 'Arial', sans-serif;
+                          display: flex;
+                          flex-direction: column;
+                          align-items: center;
+                          justify-content: center;
+                          height: 100vh;
+                          background-color: #f3f4f6;
+                          color: #333;
+                      }
+                      #container {
+                          display: flex;
+                          justify-content: space-between;
+                          align-items: center;
+                          max-width: 800px;
+                          width: 100%;
+                          background-color: #ffffff;
+                          box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+                          padding: 20px;
+                          border-radius: 10px;
+                      }
+                      #info {
+                          width: 600px;
+                          display: flex;
+                          flex-direction: column;
+                          align-items: flex-start;
+                          justify-content: center;
+                          margin-left: 20px;
+                      }
+                      #imageContainer {
+                          width: 300px;
+                          display: flex;
+                          align-items: center;
+                          justify-content: center;
+                      }
+                      img {
+                          max-width: 100%;
+                          max-height: 100%;
+                          border-radius: 8px;
+                          transition: transform 0.3s;
+                      }
+                      img:hover {
+                          transform: scale(1.05);
+                      }
+                      #buttonContainer {
+                          display: flex;
+                          justify-content: space-between;
+                          max-width: 860px;
+                          width: 100%;
+                          margin-bottom: 20px;
+                      }
+                      #buttonContainer input, #updateButton {
+                          width: 50%;
+                          padding: 10px;
+                          margin: 0 10px;
+                      }
 
-                          button {
-                              flex: 1;  
-                              margin: 0 10px; 
-                              padding: 10px;
-                              font-size: 16px;
-                              border: none;
-                              border-radius: 5px;
-                              color: #fff;
-                              background-color: #007BFF;
-                              cursor: pointer;
-                              transition: background-color 0.3s, transform 0.2s;
-                          }
-                          button:hover {
-                              background-color: #0056b3;
-                              transform: translateY(-2px);
-                          }
-                          p {
-                              margin: 8px 0;
-                              font-size: 16px;
-                          }
-                          #inputContainer {
-                              margin-bottom: 20px;
-                          }
-                          input {
-                              padding: 10px;
-                              border: 1px solid #ccc;
-                              border-radius: 5px;
-                              margin-right: 10px;
-                              width: 400px;
-                          }
-                          #updateButton {
-                              padding: 10px 20px;
-                              border: none;
-                              border-radius: 5px;
-                              background-color: #007BFF;
-                              color: #fff;
-                              cursor: pointer;
-                          }
-                      </style>
-                  </head>
-                  <body>
-                      <div id="buttonContainer">
-                          <input type="text" id="urlCloudFront" placeholder="Add CloudFront URL">
-                          <input type="text" id="urlS3Origin" placeholder="Add S3 Origin URL">
-                          <button id="updateButton" onclick="updateUrls()">Update</button>
+                      button {
+                          flex: 1;  
+                          margin: 0 10px; 
+                          padding: 10px;
+                          font-size: 16px;
+                          border: none;
+                          border-radius: 5px;
+                          color: #fff;
+                          background-color: #007BFF;
+                          cursor: pointer;
+                          transition: background-color 0.3s, transform 0.2s;
+                      }
+                      button:hover {
+                          background-color: #0056b3;
+                          transform: translateY(-2px);
+                      }
+                      p {
+                          margin: 8px 0;
+                          font-size: 16px;
+                      }
+                  </style>
+              </head>
+              <body>
+
+                  <div id="buttonContainer">
+                      <input type="text" id="urlS3Origin" placeholder="Add S3 Origin URL">
+                      <input type="text" id="urlCloudFront" placeholder="Add CloudFront URL">
+                  </div>
+
+                  <div id="buttonContainer">
+                      <button onclick="loadOriginImage()">Load Origin Image</button>
+                      <button onclick="loadImage()">Load Cached Image</button>
+                  </div>
+
+                  <div id="container">
+                      <div id="imageContainer">
+                          <img id="image" src="" alt="High Resolution Image" style="display: none;">
                       </div>
-                      <div id="container">
-                          <div id="imageContainer">
-                              <img id="image" src="" alt="High Resolution Image" style="display: none;">
-                          </div>
-                          <div id="info">
-                              <p>Origin Object Load Time: <span id="originLoadTime">N/A</span>ms</p>
-                              <p>Load Time: <span id="loadTime">N/A</span>ms</p>
-                              <p>Percentage faster: <span id="percentageFaster">N/A</span></p>
-                              <p>Cache-Control: <span id="Cache-Control">N/A</span></p>
-                              <p>Age: <span id="Age">N/A</span></p>
-                              <p>X-Cache: <span id="X-Cache">N/A</span></p>
-                              <p>X-amz-cf-pop: <span id="X-Amz-Cf-Pop">N/A</span></p>
-                          </div>
+                      <div id="info">
+                          <p>Origin Object Load Time: <span id="originLoadTime">N/A</span>ms</p>
+                          <p>Load Time: <span id="loadTime">N/A</span>ms</p>
+                          <p>Percentage faster: <span id="percentageFaster">N/A</span></p>
+                          <p>Cache-Control: <span id="Cache-Control">N/A</span></p>
+                          <p>Age: <span id="Age">N/A</span></p>
+                          <p>X-Cache: <span id="X-Cache">N/A</span></p>
+                          <p>X-amz-cf-pop: <span id="X-Amz-Cf-Pop">N/A</span></p>
                       </div>
-                      <div id="buttonContainer">
-                          <button onclick="imageLoader.loadOriginImage()">Load Origin Image</button>
-                          <button onclick="imageLoader.loadImage()">Load Cached Image</button>
-                      </div>
+                  </div>
 
-                      <script>
-                          const imageLoader = {
-                              originLoadTime: null,
-                              urlCloudFront: 'https://d23lj0rp0jvey0.cloudfront.net',
-                              urlS3Origin: 'https://alick-saopaulo-public.s3-website-sa-east-1.amazonaws.com',
+              <script>
+              let originLoadTime = null;
 
-                              updateUrls() {
-                                  const urlCloudFrontInput = document.getElementById('urlCloudFront').value;
-                                  const urlS3OriginInput = document.getElementById('urlS3Origin').value;
+              async function loadImage() {
+                  const urlCloudFront = document.getElementById('urlCloudFront').value;
+                  if (urlCloudFront) {
+                      await loadGenericImage(`https://${urlCloudFront}/moon-hi.jpeg`, 'loadTime');
+                      if (originLoadTime) {
+                          const percentageFaster = ((originLoadTime - parseInt(document.getElementById('loadTime').innerText)) / originLoadTime) * 100;
+                          document.getElementById('percentageFaster').innerText = `${percentageFaster.toFixed(2)}%`;
+                      }
+                  } else {
+                      console.log("Please enter a CloudFront URL");
+                  }
+              }
 
-                                  if (urlCloudFrontInput) this.urlCloudFront = urlCloudFrontInput;
-                                  if (urlS3OriginInput) this.urlS3Origin = urlS3OriginInput;
+              async function loadOriginImage() {
+                  const urlS3Origin = document.getElementById('urlS3Origin').value;
+                  if (urlS3Origin) {
+                      originLoadTime = await loadGenericImage(`https://${urlS3Origin}/moon-hi.jpeg`, 'originLoadTime');
+                  } else {
+                      console.log("Please enter an S3 Origin URL");
+                  }
+              }
 
-                                  const cloudFrontUrl = `${this.urlCloudFront.startsWith('https://') ? '' : 'https://'}${this.urlCloudFront}/moon-hi.jpeg`;
-                                  const s3Url = `${this.urlS3Origin.startsWith('https://') ? '' : 'https://'}${this.urlS3Origin}/moon-hi.jpeg`;
 
-                                  this.loadImage(cloudFrontUrl);
-                                  this.loadOriginImage(s3Url);
-                              },
+              async function loadGenericImage(url, loadTimeElementId) {
+                  const img = document.getElementById('image');
+                  const startTime = new Date().getTime();
 
-                              async loadImage(cloudFrontUrl) {
-                                  await this.loadGenericImage(cloudFrontUrl, 'loadTime');
-                                  if (this.originLoadTime) {
-                                      const percentageFaster = ((this.originLoadTime - parseInt(document.getElementById('loadTime').innerText)) / this.originLoadTime) * 100;
-                                      document.getElementById('percentageFaster').innerText = `${percentageFaster.toFixed(2)}%`;
-                                  } else {
-                                      document.getElementById('percentageFaster').innerText = 'N/A';
-                                  }
-                              },
+                  try {
+                      const response = await fetch(url);
 
-                              async loadOriginImage(s3Url) {
-                                  this.originLoadTime = await this.loadGenericImage(s3Url, 'originLoadTime');
-                              },
+                      if (!response.ok) {
+                          throw new Error('Network response was not ok');
+                      }
 
-                              async loadGenericImage(url, loadTimeElementId) {
-                                  const img = document.getElementById('image');
-                                  const startTime = new Date().getTime();
+                      const imageData = await response.blob();
+                      const objectURL = URL.createObjectURL(imageData);
+                      img.src = objectURL;
+                      // Extract headers from the response
+                      const cacheControl = response.headers.get('Cache-Control');
+                      const xCache = response.headers.get('X-Cache');
+                      const xAmzCfPop = response.headers.get('X-Amz-Cf-Pop');
+                      const aGE = response.headers.get('Age');
 
-                                  try {
-                                      const response = await fetch(url);
+                      document.getElementById('Cache-Control').innerText = cacheControl || 'Not Available';
+                      document.getElementById('X-Cache').innerText = xCache || 'Not Available';
+                      document.getElementById('X-Amz-Cf-Pop').innerText = xAmzCfPop || 'Not Available';
+                      document.getElementById('Age').innerText = aGE || 'Not Available';
 
-                                      if (!response.ok) {
-                                          throw new Error('Network response was not ok');
-                                      }
+                      return new Promise(resolve => {
+                          img.onload = function() {
+                              const endTime = new Date().getTime();
+                              const loadTime = endTime - startTime;
+                              document.getElementById(loadTimeElementId).innerText = loadTime;
+                              img.style.display = 'block';
+                              URL.revokeObjectURL(objectURL);
+                              resolve(loadTime);
+                          }
+                      });
+                  } catch (error) {
+                      console.log('There has been a problem with your fetch operation:', error.message);
+                      return null;
+                  }
+              }
+              </script>
 
-                                      const imageData = await response.blob();
-                                      const objectURL = URL.createObjectURL(imageData);
-                                      img.src = objectURL;
-                                      // Extract headers from the response
-                                      const cacheControl = response.headers.get('Cache-Control');
-                                      const xCache = response.headers.get('X-Cache');
-                                      const xAmzCfPop = response.headers.get('X-Amz-Cf-Pop');
-                                      const age = response.headers.get('Age');
-
-                                      document.getElementById('Cache-Control').innerText = cacheControl || 'Not Available';
-                                      document.getElementById('X-Cache').innerText = xCache || 'Not Available';
-                                      document.getElementById('X-Amz-Cf-Pop').innerText = xAmzCfPop || 'Not Available';
-                                      document.getElementById('Age').innerText = age || 'Not Available';
-
-                                      return new Promise(resolve => {
-                                          img.onload = function() {
-                                              const endTime = new Date().getTime();
-                                              const loadTime = endTime - startTime;
-                                              document.getElementById(loadTimeElementId).innerText = loadTime;
-                                              img.style.display = 'block';
-                                              URL.revokeObjectURL(objectURL);
-                                              resolve(loadTime);
-                                          }
-                                      });
-                                  } catch (error) {
-                                      console.log('There has been a problem with your fetch operation:', error.message);
-                                      return null;
-                                  }
-                              }
-                          };
-
-                          document.getElementById('updateButton').addEventListener('click', () => imageLoader.updateUrls());
-                      </script>
-                  </body>
-              </html>
+              </body>
               """
             return html_content  # This line is added to return the HTML content
   CreateLambdaS3StaticWebsite:
@@ -468,26 +446,6 @@ Resources:
               state_machine_arn = f'arn:aws:states:{os.environ["AWS_REGION_ID"]}:{os.environ["AWS_ACCOUNT_ID"]}:stateMachine:{os.environ["STATE_MACHINE_NAME"]}'
               
               try:
-                  if event['RequestType'] == 'Delete':
-                      # Delete state machine
-                      client.delete_state_machine(
-                          stateMachineArn=state_machine_arn
-                      )
-                      cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
-                      return
-                  
-                  # For create or update, first check if state machine exists and delete if necessary
-                  try:
-                      client.describe_state_machine(
-                          stateMachineArn=state_machine_arn
-                      )
-                      client.delete_state_machine(
-                          stateMachineArn=state_machine_arn
-                      )
-                  except client.exceptions.StateMachineDoesNotExist:
-                      pass  # State machine does not exist, proceed to create it
-
-                  # Create or update state machine
                   response = client.start_execution(
                       stateMachineArn=state_machine_arn,
                       name='ExecutionFromCloudFormation',
@@ -505,7 +463,8 @@ Resources:
 Outputs:
   SpeedComparismWebsiteOrigin:
     Description: 'This is the URL of the Speed Comparism Website.'
-    Value: !Sub '${BucketName}.s3-website-${BucketRegion}.amazonaws.com'
+    Value: !Sub '${BucketName}.s3.${BucketRegion}.amazonaws.com'
   SpeedComparismWebsiteCloudFront:
     Description: 'The domain name of the CloudFront distribution.'
     Value: !GetAtt CreateCloudFrontDistribution.DomainName
+
