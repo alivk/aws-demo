@@ -454,17 +454,15 @@ Resources:
 
               except Exception as e:
                   cfnresponse.send(event, context, cfnresponse.FAILED, {'Error': str(e)})
-
   StartStateMachineCustomResource:
     Type: Custom::StartStateMachine
     Properties:
       ServiceToken: !GetAtt StartStateMachineFunction.Arn
 
 Outputs:
-  SpeedComparismWebsiteOrigin:
+  LoadOriginImageURL:
     Description: 'This is the URL of the Speed Comparism Website.'
     Value: !Sub '${BucketName}.s3.${BucketRegion}.amazonaws.com'
-  SpeedComparismWebsiteCloudFront:
+  LoadCachedImageURL:
     Description: 'The domain name of the CloudFront distribution.'
     Value: !GetAtt CreateCloudFrontDistribution.DomainName
-
