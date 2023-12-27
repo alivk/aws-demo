@@ -110,7 +110,7 @@ Resources:
           find /var/www -type d -exec chmod 2775 {} \;
           find /var/www -type f -exec chmod 0664 {} \;
       
-          # PHP script to display Instance ID and Availability Zone
+          # PHP script to display Instance ID, Availability Zone, and the Image
           cat << 'EOF' > /var/www/html/index.php
             <!DOCTYPE html>
             <html>
@@ -120,9 +120,24 @@ Resources:
                 <img src="aws.gif" alt="AWS Image">
       
                 <?php
-                # Get the instance ID and Availability Zone
-                $instance_id = file_get_contents("http://169.254.169.254/latest/meta-data/instance-id");
-                $zone = file_get_contents("http://169.254.169.254/latest/meta-data/placement/availability-zone");
+                # Function to get metadata using IMDSv2
+                function get_instance_metadata($path) {
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, "http://169.254.169.254/latest/api/token");
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, array("X-aws-ec2-metadata-token-ttl-seconds: 21600"));
+                    curl_setopt($ch, CURLOPT_PUT, true);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    $token = curl_exec($ch);
+      
+                    curl_setopt($ch, CURLOPT_URL, "http://169.254.169.254/latest/meta-data/" . $path);
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, array("X-aws-ec2-metadata-token: " . $token));
+                    curl_setopt($ch, CURLOPT_PUT, false);
+                    return curl_exec($ch);
+                }
+      
+                # Get the instance ID and Availability Zone using IMDSv2
+                $instance_id = get_instance_metadata("instance-id");
+                $zone = get_instance_metadata("placement/availability-zone");
                 ?>
                 <h2>EC2 Instance ID: <?php echo $instance_id ?></h2>
                 <h2>Availability Zone: <?php echo $zone ?></h2>
@@ -130,7 +145,7 @@ Resources:
             </body>
             </html>
           EOF
-      
+          
           # Install FFmpeg if not already installed
           if ! command -v ffmpeg &> /dev/null
           then
