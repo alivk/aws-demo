@@ -95,28 +95,34 @@ Resources:
       UserData:
         Fn::Base64: |
           #!/bin/bash
+          # Update and install necessary packages
           yum update -y
-          yum install -y httpd php
+          yum install -y httpd php wget tar
+      
+          # Start and enable HTTP service
           systemctl start httpd
           systemctl enable httpd
+      
+          # Permissions and ownership settings for Apache
           usermod -a -G apache ec2-user
           chown -R ec2-user:apache /var/www
           chmod 2775 /var/www
           find /var/www -type d -exec chmod 2775 {} \;
           find /var/www -type f -exec chmod 0664 {} \;
+      
           # PHP script to display Instance ID and Availability Zone
           cat << 'EOF' > /var/www/html/index.php
             <!DOCTYPE html>
             <html>
             <body>
               <center>
+                <h2>Johor-Singapore Causeway Traffic</h2>
+                <img src="aws.gif" alt="AWS Image">
+      
                 <?php
-                # Get the instance ID from meta-data and store it in the $instance_id variable
-                $url = "http://169.254.169.254/latest/meta-data/instance-id";
-                $instance_id = file_get_contents($url);
-                # Get the instance's availability zone from metadata and store it in the $zone variable
-                $url = "http://169.254.169.254/latest/meta-data/placement/availability-zone";
-                $zone = file_get_contents($url);
+                # Get the instance ID and Availability Zone
+                $instance_id = file_get_contents("http://169.254.169.254/latest/meta-data/instance-id");
+                $zone = file_get_contents("http://169.254.169.254/latest/meta-data/placement/availability-zone");
                 ?>
                 <h2>EC2 Instance ID: <?php echo $instance_id ?></h2>
                 <h2>Availability Zone: <?php echo $zone ?></h2>
@@ -124,6 +130,21 @@ Resources:
             </body>
             </html>
           EOF
+      
+          # Install FFmpeg if not already installed
+          if ! command -v ffmpeg &> /dev/null
+          then
+              cd /usr/local/bin
+              mkdir -p ffmpeg
+              cd ffmpeg
+              wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz
+              tar -xJf ffmpeg-git-amd64-static.tar.xz --strip-components=1
+              ln -s /usr/local/bin/ffmpeg/ffmpeg /usr/bin/ffmpeg
+          fi
+      
+          # Verify FFmpeg installation
+          ffmpeg -version
+
 
   AlSecurityGroup:
     Type: AWS::EC2::SecurityGroup
