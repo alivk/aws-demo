@@ -44,6 +44,18 @@ Mappings:
       InstanceType: t2.small
 
 Resources:
+  AlSSMIAMRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: "AlSSMIAMRoleExtraPolicy"
+      Roles: [!Ref AlSSMIAMRole]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "VisualEditor0"
+            Effect: "Allow"
+            Action: "s3express:*"
+            Resource: "*"
   AlSSMIAMRole:
     Type: AWS::IAM::Role
     Properties:
