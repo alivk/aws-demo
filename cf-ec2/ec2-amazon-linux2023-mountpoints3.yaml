@@ -97,7 +97,7 @@ Resources:
           #!/bin/bash
           # Update and install necessary packages
           yum update -y
-          yum install -y httpd php wget tar
+          yum install -y httpd php wget tar xz
       
           # Start and enable HTTP service
           systemctl start httpd
@@ -138,7 +138,7 @@ Resources:
               mkdir -p ffmpeg
               cd ffmpeg
               wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz
-              tar -xJf ffmpeg-git-amd64-static.tar.xz --strip-components=1
+              tar -xf ffmpeg-git-amd64-static.tar.xz --strip-components=1
               ln -s /usr/local/bin/ffmpeg/ffmpeg /usr/bin/ffmpeg
           fi
       
