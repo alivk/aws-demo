@@ -1,0 +1,156 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Create Amazon Linux 2023 EC2 Instance for s3mountpoint
+
+Parameters:
+  AlEnvironmentType:
+    Description: 'Specify the Environment type of the stack.'
+    Type: String
+    Default: Test
+    AllowedValues:
+      - Dev
+      - Test
+      - Prod
+    ConstraintDescription: 'Specify either Dev, Test or Prod.'
+
+  AlAmiID:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Description: 'The ID of the AMI.'
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+  AlVpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: 'The ID of the VPC where resources will be deployed.'
+    Default: vpc-0bcfd5f4c10fa74f6
+
+  AlSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: 'The ID of the subnet in which the instance will be launched.'
+    Default: subnet-0c7bcf36809b0ed9b
+
+  AlCidrIp:
+    Type: String
+    Description: 'The CIDR IP range that is allowed to access the instance.'
+    Default: '0.0.0.0/0'
+    Default: 132.147.100.0/24
+
+Mappings:
+  EnvironmentToInstanceType:
+    Dev:
+      InstanceType: t2.nano
+    Test:
+      InstanceType: t2.micro
+    Prod:
+      InstanceType: t2.small
+
+Resources:
+  AlSSMIAMRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: "AlSSMIAMRoleExtraPolicy"
+      Roles: [!Ref AlSSMIAMRole]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "VisualEditor0"
+            Effect: "Allow"
+            Action: "s3express:*"
+            Resource: "*"
+  AlSSMIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  AlInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref AlSSMIAMRole
+
+  AlEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: !Ref AlInstanceProfile
+      ImageId: !Ref AlAmiID
+      InstanceType: !FindInMap [EnvironmentToInstanceType, !Ref AlEnvironmentType, InstanceType]
+      SecurityGroupIds:
+        - !Ref AlSecurityGroup
+      Tags:
+        - Key: Name
+          Value: !Join [ '-', [ !Ref AlEnvironmentType, s3-mountpoint ] ]
+      SubnetId: !Ref AlSubnetId
+      SecurityGroupIds:
+        - !GetAtt AlSecurityGroup.GroupId
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          yum update -y
+          yum install -y httpd php
+          systemctl start httpd
+          systemctl enable httpd
+          usermod -a -G apache ec2-user
+          chown -R ec2-user:apache /var/www
+          chmod 2775 /var/www
+          find /var/www -type d -exec chmod 2775 {} \;
+          find /var/www -type f -exec chmod 0664 {} \;
+          # PHP script to display Instance ID and Availability Zone
+          cat << 'EOF' > /var/www/html/index.php
+            <!DOCTYPE html>
+            <html>
+            <body>
+              <center>
+                <?php
+                # Get the instance ID from meta-data and store it in the $instance_id variable
+                $url = "http://169.254.169.254/latest/meta-data/instance-id";
+                $instance_id = file_get_contents($url);
+                # Get the instance's availability zone from metadata and store it in the $zone variable
+                $url = "http://169.254.169.254/latest/meta-data/placement/availability-zone";
+                $zone = file_get_contents($url);
+                ?>
+                <h2>EC2 Instance ID: <?php echo $instance_id ?></h2>
+                <h2>Availability Zone: <?php echo $zone ?></h2>
+              </center>
+            </body>
+            </html>
+          EOF
+
+  AlSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Enable HTTP access via port 80'
+      VpcId: !Ref AlVpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref AlCidrIp
+
+  AlElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref AlEC2Instance
+
+Outputs:
+  PublicDNS:
+    Description: 'Public DNS of EC2 instance'
+    Value: !GetAtt AlEC2Instance.PublicDnsName
+
+  ElasticIP:
+    Description: 'Elastic IP assigned to EC2'
+    Value: !Ref AlElasticIP
+
+  WebsiteURL:
+    Value: !Sub http://${AlElasticIP}
+    Description: Application URL
