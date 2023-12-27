@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Generic EC2 Instance Demo Environment Creation for alick-demo
+Description: Create Amazon Linux 2 EC2 Instance for alick-demo
 
 Parameters:
   AlEnvironmentType:
