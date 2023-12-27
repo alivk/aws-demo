@@ -76,7 +76,7 @@ Resources:
         - !Ref AlSecurityGroup
       Tags:
         - Key: Name
-          Value: !Join [ '-', [ !Ref AlEnvironmentType, UserdataFromCloudformation ] ]
+          Value: !Join [ '-', [ !Ref AlEnvironmentType, ec2demo ] ]
       SubnetId: !Ref AlSubnetId
       SecurityGroupIds:
         - !GetAtt AlSecurityGroup.GroupId
