@@ -21,6 +21,7 @@ Parameters:
   AlVpcId:
     Type: AWS::EC2::VPC::Id
     Description: 'The ID of the VPC where resources will be deployed.'
+    Default: vpc-9020aeed
 
   AlSubnetId:
     Type: AWS::EC2::Subnet::Id
