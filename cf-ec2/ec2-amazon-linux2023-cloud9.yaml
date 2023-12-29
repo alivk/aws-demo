@@ -1,6 +1,7 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Creates a Cloud9 bootstraps the instance - alick-demo
+Description: AWS CloudFormation template for dynamic Cloud 9 setups. Creates a Cloud9
+  bootstraps the instance.
 Parameters:
 
   AlAmiID:
@@ -8,15 +9,7 @@ Parameters:
     Description: The Image to use for the Cloud9Instance
     Default: amazonlinux-2023-x86_64
 
-  AlConnection:
-    Description: The connection type used for connecting to an Amazon EC2 environment.
-    Type: String
-    Default: CONNECT_SSM
-    AllowedValues:
-      - CONNECT_SSH
-      - CONNECT_SSM
-
-  AlC9InstanceType:
+  ExampleC9InstanceType:
     Description: Example Cloud9 instance type
     Type: String
     Default: t3.small
@@ -26,8 +19,7 @@ Parameters:
       - t3.small
       - t3.medium
     ConstraintDescription: Must be a valid Cloud9 instance type
-
-  AlC9EnvType: 
+  ExampleC9EnvType: 
     Description: Environment type.
     Default: self
     Type: String
@@ -35,23 +27,21 @@ Parameters:
       - self
       - 3rdParty
     ConstraintDescription: must specify self or 3rdParty.
-
-  AlOwnerArn: 
+  ExampleOwnerArn: 
     Type: String
     Description: The Arn of the Cloud9 Owner to be set if 3rdParty deployment.
     Default: ""
-    
-  AlC9InstanceVolumeSize: 
+  ExampleC9InstanceVolumeSize: 
     Type: Number
     Description: The Size in GB of the Cloud9 Instance Volume. 
     Default: 15
 
 Conditions: 
-  Create3rdPartyResources: !Equals [ !Ref AlC9EnvType, 3rdParty ]
+  Create3rdPartyResources: !Equals [ !Ref ExampleC9EnvType, 3rdParty ]
 
 Resources:
 ################## PERMISSIONS AND ROLES #################
-  AlC9Role:
+  ExampleC9Role:
     Type: AWS::IAM::Role
     Properties:
       Tags:
@@ -68,16 +58,7 @@ Resources:
           Action:
           - sts:AssumeRole
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-      Policies:
-      - PolicyName: CodeWhispererPolicy
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            Action: 
-            - codewhisperer:GenerateRecommendations
-            Resource: "*"
+      - arn:aws:iam::aws:policy/AdministratorAccess
       Path: "/"
 
   ExampleC9LambdaExecutionRole:
@@ -107,6 +88,8 @@ Resources:
             - logs:CreateLogGroup
             - logs:CreateLogStream
             - logs:PutLogEvents
+            - logs:DescribeLogStreams
+            - logs:GetLogEvents
             Resource: arn:aws:logs:*:*:*
           - Effect: Allow
             Action:
@@ -129,8 +112,8 @@ Resources:
     Type: Custom::ExampleC9BootstrapInstanceLambda
     DependsOn:
     - ExampleC9BootstrapInstanceLambdaFunction
-    - AlC9Instance
-    - AlC9InstanceProfile
+    - ExampleC9Instance
+    - ExampleC9InstanceProfile
     - ExampleC9LambdaExecutionRole
     Properties:
       Tags:
@@ -145,12 +128,12 @@ Resources:
       StackName:
         Ref: AWS::StackName
       EnvironmentId:
-        Ref: AlC9Instance
+        Ref: ExampleC9Instance
       LabIdeInstanceProfileName:
-        Ref: AlC9InstanceProfile
+        Ref: ExampleC9InstanceProfile
       LabIdeInstanceProfileArn:
         Fn::GetAtt:
-        - AlC9InstanceProfile
+        - ExampleC9InstanceProfile
         - Arn
 
   ExampleC9BootstrapInstanceLambdaFunction:
@@ -266,7 +249,7 @@ Resources:
             - echo '=== INSTALL and CONFIGURE default software components ==='
             - sudo -H -u ec2-user bash -c "pip install --user -U boto boto3 botocore awscli"
             - echo '=== Resizing the Instance volume'
-            - !Sub SIZE=${AlC9InstanceVolumeSize}
+            - !Sub SIZE=${ExampleC9InstanceVolumeSize}
             - !Sub REGION=${AWS::Region}
             - |
               INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
@@ -333,14 +316,14 @@ Resources:
           - Active
 
 ################## INSTANCE #####################
-  AlC9InstanceProfile:
+  ExampleC9InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Path: "/"
       Roles:
-      - Ref: AlC9Role
+      - Ref: ExampleC9Role
 
-  AlC9Instance:
+  ExampleC9Instance:
     Description: "-"
     DependsOn: ExampleC9BootstrapAssociation
     Type: AWS::Cloud9::EnvironmentEC2
@@ -348,12 +331,11 @@ Resources:
       Description: AWS Cloud9 instance for Examples
       AutomaticStopTimeMinutes: 3600
       InstanceType:
-        Ref: AlC9InstanceType
+        Ref: ExampleC9InstanceType
       Name:
         Ref: AWS::StackName
       ImageId: !Ref AlAmiID
-      ConnectionType:  !Ref AlConnection
-      OwnerArn: !If [Create3rdPartyResources, !Ref AlOwnerArn, !Ref "AWS::NoValue" ]
+      OwnerArn: !If [Create3rdPartyResources, !Ref ExampleOwnerArn, !Ref "AWS::NoValue" ]
       Tags: 
         - 
           Key: SSMBootstrap
@@ -370,6 +352,6 @@ Outputs:
       - - https://
         - Ref: AWS::Region
         - ".console.aws.amazon.com/cloud9/ide/"
-        - Ref: AlC9Instance
+        - Ref: ExampleC9Instance
         - "?region="
         - Ref: AWS::Region
