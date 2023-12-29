@@ -3,20 +3,11 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: AWS CloudFormation template for dynamic Cloud 9 setups. Creates a Cloud9
   bootstraps the instance.
 Parameters:
-
   AlAmiID:
     Type: String
     Description: The Image to use for the Cloud9Instance
     Default: amazonlinux-2023-x86_64
 
-  AlConnection:
-    Description: The connection type used for connecting to an Amazon EC2 environment.
-    Type: String
-    Default: CONNECT_SSM
-    AllowedValues:
-      - CONNECT_SSH
-      - CONNECT_SSM
-      
   ExampleC9InstanceType:
     Description: Example Cloud9 instance type
     Type: String
@@ -342,7 +333,6 @@ Resources:
         Ref: AWS::StackName
       OwnerArn: !If [Create3rdPartyResources, !Ref ExampleOwnerArn, !Ref "AWS::NoValue" ]
       ImageId: !Ref AlAmiID
-      ConnectionType:  !Ref AlConnection
       Tags: 
         - 
           Key: SSMBootstrap
