@@ -9,6 +9,14 @@ Parameters:
     Description: The Image to use for the Cloud9Instance
     Default: amazonlinux-2023-x86_64
 
+  AlConnection:
+    Description: The connection type used for connecting to an Amazon EC2 environment.
+    Type: String
+    Default: CONNECT_SSM
+    AllowedValues:
+      - CONNECT_SSH
+      - CONNECT_SSM
+
   ExampleC9InstanceType:
     Description: Example Cloud9 instance type
     Type: String
@@ -335,6 +343,7 @@ Resources:
       Name:
         Ref: AWS::StackName
       ImageId: !Ref AlAmiID
+      ConnectionType:  !Ref AlConnection
       OwnerArn: !If [Create3rdPartyResources, !Ref ExampleOwnerArn, !Ref "AWS::NoValue" ]
       Tags: 
         - 
