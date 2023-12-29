@@ -3,12 +3,21 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: AWS CloudFormation template for dynamic Cloud 9 setups. Creates a Cloud9
   bootstraps the instance.
 Parameters:
+
   AlAmiID:
     Type: String
     Description: The Image to use for the Cloud9Instance
     Default: amazonlinux-2023-x86_64
 
-  ExampleC9InstanceType:
+  AlConnection:
+    Description: The connection type used for connecting to an Amazon EC2 environment.
+    Type: String
+    Default: CONNECT_SSM
+    AllowedValues:
+      - CONNECT_SSH
+      - CONNECT_SSM
+
+  AlC9InstanceType:
     Description: Example Cloud9 instance type
     Type: String
     Default: t3.small
@@ -18,7 +27,8 @@ Parameters:
       - t3.small
       - t3.medium
     ConstraintDescription: Must be a valid Cloud9 instance type
-  ExampleC9EnvType: 
+
+  AlC9EnvType: 
     Description: Environment type.
     Default: self
     Type: String
@@ -26,21 +36,23 @@ Parameters:
       - self
       - 3rdParty
     ConstraintDescription: must specify self or 3rdParty.
-  ExampleOwnerArn: 
+
+  AlOwnerArn: 
     Type: String
     Description: The Arn of the Cloud9 Owner to be set if 3rdParty deployment.
     Default: ""
-  ExampleC9InstanceVolumeSize: 
+    
+  AlC9InstanceVolumeSize: 
     Type: Number
     Description: The Size in GB of the Cloud9 Instance Volume. 
     Default: 15
 
 Conditions: 
-  Create3rdPartyResources: !Equals [ !Ref ExampleC9EnvType, 3rdParty ]
+  Create3rdPartyResources: !Equals [ !Ref AlC9EnvType, 3rdParty ]
 
 Resources:
 ################## PERMISSIONS AND ROLES #################
-  ExampleC9Role:
+  AlC9Role:
     Type: AWS::IAM::Role
     Properties:
       Tags:
@@ -109,8 +121,8 @@ Resources:
     Type: Custom::ExampleC9BootstrapInstanceLambda
     DependsOn:
     - ExampleC9BootstrapInstanceLambdaFunction
-    - ExampleC9Instance
-    - ExampleC9InstanceProfile
+    - AlC9Instance
+    - AlC9InstanceProfile
     - ExampleC9LambdaExecutionRole
     Properties:
       Tags:
@@ -125,12 +137,12 @@ Resources:
       StackName:
         Ref: AWS::StackName
       EnvironmentId:
-        Ref: ExampleC9Instance
+        Ref: AlC9Instance
       LabIdeInstanceProfileName:
-        Ref: ExampleC9InstanceProfile
+        Ref: AlC9InstanceProfile
       LabIdeInstanceProfileArn:
         Fn::GetAtt:
-        - ExampleC9InstanceProfile
+        - AlC9InstanceProfile
         - Arn
 
   ExampleC9BootstrapInstanceLambdaFunction:
@@ -246,7 +258,7 @@ Resources:
             - echo '=== INSTALL and CONFIGURE default software components ==='
             - sudo -H -u ec2-user bash -c "pip install --user -U boto boto3 botocore awscli"
             - echo '=== Resizing the Instance volume'
-            - !Sub SIZE=${ExampleC9InstanceVolumeSize}
+            - !Sub SIZE=${AlC9InstanceVolumeSize}
             - !Sub REGION=${AWS::Region}
             - |
               INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
@@ -313,14 +325,14 @@ Resources:
           - Active
 
 ################## INSTANCE #####################
-  ExampleC9InstanceProfile:
+  AlC9InstanceProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
       Path: "/"
       Roles:
-      - Ref: ExampleC9Role
+      - Ref: AlC9Role
 
-  ExampleC9Instance:
+  AlC9Instance:
     Description: "-"
     DependsOn: ExampleC9BootstrapAssociation
     Type: AWS::Cloud9::EnvironmentEC2
@@ -328,11 +340,12 @@ Resources:
       Description: AWS Cloud9 instance for Examples
       AutomaticStopTimeMinutes: 3600
       InstanceType:
-        Ref: ExampleC9InstanceType
+        Ref: AlC9InstanceType
       Name:
         Ref: AWS::StackName
-      OwnerArn: !If [Create3rdPartyResources, !Ref ExampleOwnerArn, !Ref "AWS::NoValue" ]
       ImageId: !Ref AlAmiID
+      ConnectionType:  !Ref AlConnection
+      OwnerArn: !If [Create3rdPartyResources, !Ref AlOwnerArn, !Ref "AWS::NoValue" ]
       Tags: 
         - 
           Key: SSMBootstrap
@@ -349,6 +362,6 @@ Outputs:
       - - https://
         - Ref: AWS::Region
         - ".console.aws.amazon.com/cloud9/ide/"
-        - Ref: ExampleC9Instance
+        - Ref: AlC9Instance
         - "?region="
         - Ref: AWS::Region
