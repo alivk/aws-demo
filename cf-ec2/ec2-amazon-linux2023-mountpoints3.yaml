@@ -31,7 +31,6 @@ Parameters:
   AlCidrIp:
     Type: String
     Description: 'The CIDR IP range that is allowed to access the instance.'
-    Default: '0.0.0.0/0'
     Default: 132.147.100.0/24
 
 Mappings:
