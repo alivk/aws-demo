@@ -16,7 +16,7 @@ Parameters:
     AllowedValues:
       - CONNECT_SSH
       - CONNECT_SSM
-
+      
   ExampleC9InstanceType:
     Description: Example Cloud9 instance type
     Type: String
@@ -96,8 +96,6 @@ Resources:
             - logs:CreateLogGroup
             - logs:CreateLogStream
             - logs:PutLogEvents
-            - logs:DescribeLogStreams
-            - logs:GetLogEvents
             Resource: arn:aws:logs:*:*:*
           - Effect: Allow
             Action:
@@ -342,9 +340,9 @@ Resources:
         Ref: ExampleC9InstanceType
       Name:
         Ref: AWS::StackName
+      OwnerArn: !If [Create3rdPartyResources, !Ref ExampleOwnerArn, !Ref "AWS::NoValue" ]
       ImageId: !Ref AlAmiID
       ConnectionType:  !Ref AlConnection
-      OwnerArn: !If [Create3rdPartyResources, !Ref ExampleOwnerArn, !Ref "AWS::NoValue" ]
       Tags: 
         - 
           Key: SSMBootstrap
