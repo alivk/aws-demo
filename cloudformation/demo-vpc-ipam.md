@@ -7,6 +7,10 @@ The following Cloudformation template will create by following the steps in this
 - Top-level pool
 - Regional pool in different region
 
+**Cloudformation template**
+
+[cloudformation-template](demo-vpc-ipam.yml)
+
 **Expected Cloudshell script**
 Go to Cloud9 environment (Singapore) 
 
