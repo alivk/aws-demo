@@ -1,0 +1,190 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Author: Alick Li
+  Purpose: Class Demostration
+  Info: This yaml template is used for Create & Configure VPC IPAM Manager.
+Parameters:
+  OrganizationId:
+    Type: String
+    Default: "o-nlcyaid4qo"
+    Description: "The Amazon Organizations ID for Control Tower."
+    MinLength: 12
+    MaxLength: 12
+    AllowedPattern: '^[o][\-][a-z0-9]{10}$'
+    ConstraintDescription: "The Organization ID must be a 12 character string starting with o- and followed by 10 Lowercase Alphanumeric Characters."
+  ManagementAccountId:
+    Type: String
+    Default: "942368217596"
+    Description: "The AWS Account ID of the Control Tower Management Account."
+    AllowedPattern: '^[0-9]{12}$'
+    ConstraintDescription: "This must be a 12 character string."
+    MinLength: 12
+    MaxLength: 12
+  OperatingRegionList:
+    Type: List<String>
+    Default: "ap-southeast-1,us-west-2"
+    Description: "A list of AWS Regions where the IPAM is allowed to manage IP address CIDRs."
+  MainPoolCidrIpv4List:
+    Type: List<String>
+    Default: "10.0.0.0/14,10.4.0.0/14"
+    Description: "The list of CIDRs provisioned to the Main IPAM Regional pool."
+  ProdPoolCidrIpv4List:
+    Type: List<String>
+    Default: "10.0.0.0/15,10.4.0.0/15"
+    Description: "The list of CIDRs provisioned to the Main IPAM Production pool."
+  DevPoolCidrIpv4List:
+    Type: List<String>
+    Default: "10.2.0.0/15,10.6.0.0/15"
+    Description: "The list of CIDRs provisioned to the Main IPAM Dev pool."
+  TagEnvironment:
+    Type: String
+    Description: Select the Name of the Environment
+    AllowedValues:
+      - Production
+      - Development
+Resources:
+  # IPAM
+  Ipam:
+    Type: AWS::EC2::IPAM
+    Properties:
+      Description: Organization IPAM
+      OperatingRegions:
+        - RegionName: !Select [0, !Ref OperatingRegionList]
+        - RegionName: !Select [1, !Ref OperatingRegionList]
+      Tags:
+        - Key: Name
+          Value: Organization-Level
+        - Key: Environment
+          Value: !Ref TagEnvironment
+  IpamScope:
+    Type: AWS::EC2::IPAMScope
+    Properties:
+      Description: Custom Scope for Private IP Addresses
+      IpamId: !Ref Ipam
+      IpamScopeType: private
+      Tags:
+        - Key: Name
+          Value: Organization-Scope
+        - Key: Environment
+          Value: !Ref TagEnvironment
+  IpamTopPoolIpv4:
+    Type: AWS::EC2::IPAMPool
+    Properties:
+      AddressFamily: ipv4
+      AutoImport: True
+      Description: "IPAM Pool for Top Level Pool"
+      IpamScopeId: !Ref IpamScope
+      ProvisionedCidrs:
+        - Cidr: !Select [0, !Ref MainPoolCidrIpv4List]
+        - Cidr: !Select [1, !Ref MainPoolCidrIpv4List]
+      Tags:
+        - Key: Name
+          Value: Organization-Pool
+        - Key: Environment
+          Value: !Ref TagEnvironment
+  IpamPoolRegional1Ipv4:
+    Type: AWS::EC2::IPAMPool
+    Properties:
+      AddressFamily: ipv4
+      AutoImport: True
+      Description: "IPAM Pool for First AWS Region"
+      IpamScopeId: !Ref IpamScope
+      ProvisionedCidrs:
+        - Cidr: !Select [0, !Ref MainPoolCidrIpv4List]
+      SourceIpamPoolId: !Ref IpamTopPoolIpv4
+      Tags:
+        - Key: Name
+          Value: Region-1-Pool
+        - Key: Environment
+          Value: !Ref TagEnvironment
+  IpamPoolRegional2Ipv4:
+    Type: AWS::EC2::IPAMPool
+    Properties:
+      AddressFamily: ipv4
+      AutoImport: True
+      Description: "IPAM Pool for Second AWS Region"
+      IpamScopeId: !Ref IpamScope
+      ProvisionedCidrs:
+        - Cidr: !Select [1, !Ref MainPoolCidrIpv4List]
+      SourceIpamPoolId: !Ref IpamTopPoolIpv4
+      Tags:
+        - Key: Name
+          Value: Region-2-Pool
+        - Key: Environment
+          Value: !Ref TagEnvironment
+  IpamPoolRegional1ProdIpv4:
+    Type: AWS::EC2::IPAMPool
+    Properties:
+      AddressFamily: ipv4
+      AutoImport: True
+      AllocationResourceTags:
+        - Key: Environment
+          Value: Production
+      Description: "IPAM Pool for Production in First AWS Region"
+      IpamScopeId: !Ref IpamScope
+      Locale: !Select [0, !Ref OperatingRegionList]
+      ProvisionedCidrs:
+        - Cidr: !Select [0, !Ref ProdPoolCidrIpv4List]
+      SourceIpamPoolId: !Ref IpamPoolRegional1Ipv4
+      Tags:
+        - Key: Name
+          Value: Region-1-Production-Pool
+        - Key: Environment
+          Value: Production
+  IpamPoolRegional1DevIpv4:
+    Type: AWS::EC2::IPAMPool
+    Properties:
+      AddressFamily: ipv4
+      AutoImport: True
+      AllocationResourceTags:
+        - Key: Environment
+          Value: Development
+      Description: "IPAM Pool for Development in First AWS Region"
+      IpamScopeId: !Ref IpamScope
+      Locale: !Select [0, !Ref OperatingRegionList]
+      ProvisionedCidrs:
+        - Cidr: !Select [0, !Ref DevPoolCidrIpv4List]
+      SourceIpamPoolId: !Ref IpamPoolRegional1Ipv4
+      Tags:
+        - Key: Name
+          Value: Region-1-Development-Pool
+        - Key: Environment
+          Value: Development
+  IpamPoolRegional2ProdIpv4:
+    Type: AWS::EC2::IPAMPool
+    Properties:
+      AddressFamily: ipv4
+      AutoImport: True
+      AllocationResourceTags:
+        - Key: Environment
+          Value: Production
+      Description: "IPAM Pool for Production in Second AWS Region"
+      IpamScopeId: !Ref IpamScope
+      Locale: !Select [1, !Ref OperatingRegionList]
+      ProvisionedCidrs:
+        - Cidr: !Select [1, !Ref ProdPoolCidrIpv4List]
+      SourceIpamPoolId: !Ref IpamPoolRegional2Ipv4
+      Tags:
+        - Key: Name
+          Value: Region-2-Production-Pool
+        - Key: Environment
+          Value: Production
+  IpamPoolRegional2DevIpv4:
+    Type: AWS::EC2::IPAMPool
+    Properties:
+      AddressFamily: ipv4
+      AutoImport: True
+      AllocationResourceTags:
+        - Key: Environment
+          Value: Development
+      Description: "IPAM Pool for Development in Second AWS Region"
+      IpamScopeId: !Ref IpamScope
+      Locale: !Select [1, !Ref OperatingRegionList]
+      ProvisionedCidrs:
+        - Cidr: !Select [1, !Ref DevPoolCidrIpv4List]
+      SourceIpamPoolId: !Ref IpamPoolRegional2Ipv4
+      Tags:
+        - Key: Name
+          Value: Region-2-Development-Pool
+        - Key: Environment
+          Value: Development
