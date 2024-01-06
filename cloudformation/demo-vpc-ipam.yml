@@ -78,7 +78,7 @@ Resources:
         - Cidr: 10.0.0.0/13
       Tags:
         - Key: Name
-          Value: Organization-Pool
+          Value: Organization-topLevel-Pool
         - Key: Environment
           Value: !Ref TagEnvironment
   IpamPoolRegional1Ipv4:
