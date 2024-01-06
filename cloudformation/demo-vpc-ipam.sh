@@ -26,16 +26,16 @@ aws cloudformation create-stack \
 
 # Step 04: Waiting for CloudFormation stack creation to complete
 
-echo -n "STEP04 - Waiting for CloudFormation stack creation to complete...\n\n"
+echo -n "STEP04 - Waiting for CloudFormation stack creation to complete..."
 
 while true; do
-  echo -n "running...\n\n"
+  echo -n "running"
   aws cloudformation wait stack-create-complete --stack-name "$stack_name" &> /dev/null
   if [ $? -eq 0 ]; then
     echo "STEP05 - The CloudFormation Stack "$stack_name" is Ready!!"
     break
   else
-    echo -n "..."
+    echo -n "."
     sleep 2
   fi
 done
