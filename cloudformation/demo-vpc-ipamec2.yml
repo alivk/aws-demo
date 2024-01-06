@@ -7,7 +7,7 @@ Description: >
 Parameters:
   ec2KEYNAME:
     Description: 'Please Enter Existing EC2 KeyPair :'
-    Type: AWS::EC2::KeyPair
+    Type: AWS::EC2::KeyPair::KeyName
     ConstraintDescription: Can contain only ASCII characters.
   ec2ROLENAME:
     Description: EC2 role name
