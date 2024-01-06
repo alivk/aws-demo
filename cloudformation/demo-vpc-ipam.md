@@ -1,4 +1,4 @@
-**Create Configure VPC IPAM Manager**
+**Create Amazon VPC IPAM Manager Cloudformation Stack**
 
 The following Cloudformation template will create by following the steps in this section:
 
