@@ -4,7 +4,7 @@
 
 start_time=$(date +%s)
 stack_name="demo-vpc-ipam"
-echo "STEP01 - Starting the stack "$stack_name" creation ..."
+echo "STEP01 - Starting the stack "$stack_name" creation (average time around 93 seconds) ..."
 
 
 # Step 02: Downloading the CloudFormation template
