@@ -78,7 +78,7 @@ Resources:
         - Cidr: 10.0.0.0/13
       Tags:
         - Key: Name
-          Value: Organization-topLevel-Pool
+          Value: Pool-TopLevel
         - Key: Environment
           Value: !Ref TagEnvironment
   IpamPoolRegional1Ipv4:
@@ -93,7 +93,7 @@ Resources:
       SourceIpamPoolId: !Ref IpamTopPoolIpv4
       Tags:
         - Key: Name
-          Value: Region-1-Pool
+          Value: Pool-RegionOne
         - Key: Environment
           Value: !Ref TagEnvironment
   IpamPoolRegional2Ipv4:
@@ -108,7 +108,7 @@ Resources:
       SourceIpamPoolId: !Ref IpamTopPoolIpv4
       Tags:
         - Key: Name
-          Value: Region-2-Pool
+          Value: Pool-RegionTwo
         - Key: Environment
           Value: !Ref TagEnvironment
   IpamPoolRegional1ProdIpv4:
@@ -127,7 +127,7 @@ Resources:
       SourceIpamPoolId: !Ref IpamPoolRegional1Ipv4
       Tags:
         - Key: Name
-          Value: Region-1-Production-Pool
+          Value: Pool-RegionOneProd
         - Key: Environment
           Value: Production
   IpamPoolRegional1DevIpv4:
@@ -146,7 +146,7 @@ Resources:
       SourceIpamPoolId: !Ref IpamPoolRegional1Ipv4
       Tags:
         - Key: Name
-          Value: Region-1-Development-Pool
+          Value: Pool-RegionOneDev
         - Key: Environment
           Value: Development
   IpamPoolRegional2ProdIpv4:
@@ -165,7 +165,7 @@ Resources:
       SourceIpamPoolId: !Ref IpamPoolRegional2Ipv4
       Tags:
         - Key: Name
-          Value: Region-2-Production-Pool
+          Value: Pool-RegionTwoProd
         - Key: Environment
           Value: Production
   IpamPoolRegional2DevIpv4:
@@ -184,6 +184,6 @@ Resources:
       SourceIpamPoolId: !Ref IpamPoolRegional2Ipv4
       Tags:
         - Key: Name
-          Value: Region-2-Development-Pool
+          Value: Pool-RegionTwoDev
         - Key: Environment
           Value: Development
