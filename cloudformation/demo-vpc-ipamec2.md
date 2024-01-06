@@ -6,6 +6,8 @@ The following Cloudformation template will create by following the steps in this
 - Some Subnet part of IPAM Prod pool
 - 4 x EC2 instances
 
+Please take note this stack have no dependancy with IPAM yet as still using "manual" way of creating VPC.
+
 **Cloudformation template**
 
 [demo-vpc-ipamec2.yml](demo-vpc-ipamec2.yml)
