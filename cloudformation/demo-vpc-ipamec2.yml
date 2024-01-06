@@ -164,7 +164,7 @@ Resources:
       - NetworkInterfaceId:
           Ref: eniDEVONE
         DeviceIndex: '0'
-      ec2KEYNAME:
+      KeyName:
         Ref: ec2KEYNAME
       Tags:
       - Key: Name
@@ -193,7 +193,7 @@ Resources:
       - NetworkInterfaceId:
           Ref: eniDEVTWO
         DeviceIndex: '0'
-      ec2KEYNAME:
+      KeyName:
         Ref: ec2KEYNAME
       Tags:
       - Key: Name
@@ -222,7 +222,7 @@ Resources:
       - NetworkInterfaceId:
           Ref: eniPRODONE
         DeviceIndex: '0'
-      ec2KEYNAME:
+      KeyName:
         Ref: ec2KEYNAME
       Tags:
       - Key: Name
@@ -252,7 +252,7 @@ Resources:
       - NetworkInterfaceId:
           Ref: eniPRODTWO
         DeviceIndex: '0'
-      ec2KEYNAME:
+      KeyName:
         Ref: ec2KEYNAME
       Tags:
       - Key: Name
