@@ -9,7 +9,7 @@ The following Cloudformation template will create by following the steps in this
 
 **Cloudformation template**
 
-[cloudformation-template](demo-vpc-ipam.yml)
+[demo-vpc-ipam.yml](demo-vpc-ipam.yml)
 
 **Expected Cloudshell script**
 Go to Cloudshell environment (Singapore) and execute following command
