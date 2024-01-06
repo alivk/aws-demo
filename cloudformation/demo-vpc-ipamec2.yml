@@ -158,7 +158,7 @@ Resources:
     Properties:
       ImageId: ami-03ca998611da0fe12
       InstanceType: t3.micro
-      InstanceProfile:
+      IamInstanceProfile:
         Ref: ec2INSTANCEPROFILE
       NetworkInterfaces:
       - NetworkInterfaceId:
@@ -187,7 +187,7 @@ Resources:
     Properties:
       ImageId: ami-03ca998611da0fe12
       InstanceType: t3.micro
-      InstanceProfile:
+      IamInstanceProfile:
         Ref: ec2INSTANCEPROFILE
       NetworkInterfaces:
       - NetworkInterfaceId:
@@ -216,7 +216,7 @@ Resources:
     Properties:
       ImageId: ami-03ca998611da0fe12
       InstanceType: t3.micro
-      InstanceProfile:
+      IamInstanceProfile:
         Ref: ec2INSTANCEPROFILE
       NetworkInterfaces:
       - NetworkInterfaceId:
@@ -246,7 +246,7 @@ Resources:
     Properties:
       ImageId: ami-03ca998611da0fe12
       InstanceType: t3.micro
-      InstanceProfile:
+      IamInstanceProfile:
         Ref: ec2INSTANCEPROFILE
       NetworkInterfaces:
       - NetworkInterfaceId:
