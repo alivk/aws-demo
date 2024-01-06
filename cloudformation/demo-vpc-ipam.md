@@ -12,25 +12,18 @@ The following Cloudformation template will create by following the steps in this
 [cloudformation-template](demo-vpc-ipam.yml)
 
 **Expected Cloudshell script**
-Go to Cloud9 environment (Singapore) 
-
-and if we issue following command
-we can see the cloudformation stack is successfully created
+Go to Cloudshell environment (Singapore) and execute following command
 
 ```
-aws cloudformation create-stack \
---stack-name ipam-demo \
---template-body file://cf-ipam.yml \
---parameters \
-ParameterKey=TagEnvironment,ParameterValue=Production \
-ParameterKey=OrganizationId,ParameterValue=o-nlcyaid4qo \
-ParameterKey=ManagementAccountId,ParameterValue=942368217596 \
---capabilities CAPABILITY_IAM
+# Download the script from your GitHub repository
+curl -O https://raw.githubusercontent.com/alivk/aws-demo/main/cloudformation/demo-vpc-ipam.sh
+# Make the script executable:
+chmod +x demo-vpc-ipam.sh
+# Run the script:
+./demo-vpc-ipam.sh
 ```
 
 **Expected Ouput**
 ```
-{
- "StackId": "arn:aws:cloudformation:ap-southeast-1:xxxxxxxx:stack/ipam-demo/942c9560-1be3-11ee-b931-06ef67cb97d6"
-}
+TBC
 ```
