@@ -1,0 +1,324 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Author: Alick Li
+  Purpose: Class Demostration
+  Info: This yaml template is used to add resource on top of demo-vpc-ipam.yml template
+Parameters:
+  ec2KEYNAME:
+    Description: 'Please Enter Existing EC2 KeyPair :'
+    Type: AWS::EC2::KeyPair::ec2KEYNAME
+    ConstraintDescription: Can contain only ASCII characters.
+  ec2ROLENAME:
+    Description: EC2 role name
+    Type: String
+    Default: ROLE-SSMAdminAccess
+    ConstraintDescription: Please specify your IAM role for EC2
+  regiononeVPCCIDR:
+    Type: String
+    Default: 10.2.0.0/16
+    Description: 'Enter RegionOne VPC Dev CIDR range : .'
+  regiononePUBLICSUBNETONE:
+    Type: String
+    Default: 10.2.0.0/18
+    Description: 'Enter RegionOne VPC Dev Subnet-1 CIDR range : .'
+  regiononePUBLICSUBNETTWO:
+    Type: String
+    Default: 10.2.64.0/18
+    Description: 'Enter RegionOne VPC Dev Subnet-2 CIDR range : .'
+Resources:
+  ipamVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock:
+        Ref: regiononeVPCCIDR
+      EnableDnsHostnames: 'true'
+      EnableDnsSupport: 'true'
+      Tags:
+      - Key: Name
+        Value: IPAM RegionOne VPC
+  ipamVPCSUBNETONE:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+        - '0'
+        - Fn::GetAZs: ''
+      CidrBlock:
+        Ref: regiononePUBLICSUBNETONE
+      MapPublicIpOnLaunch: 'True'
+      Tags:
+      - Key: Name
+        Value: IPAM RegionOne SubnetOne
+      VpcId:
+        Ref: ipamVPC
+  ipamPUBLICROUTE:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: ipamVPC
+      Tags:
+      - Key: Name
+        Value: IPAM RegionOne PublicRoute
+  ipamSUBNETASSONE:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: ipamPUBLICROUTE
+      SubnetId:
+        Ref: ipamVPCSUBNETONE
+  ipamPUBLICROUTEONE:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: ipamPUBLICROUTE
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: ipamIGW
+  ipamIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: IPAM IGW
+  ipamIGWATT:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: ipamVPC
+      InternetGatewayId:
+        Ref: ipamIGW
+  ipamVPCSUBNETTWO:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+        - '1'
+        - Fn::GetAZs: ''
+      CidrBlock:
+        Ref: regiononePUBLICSUBNETTWO
+      MapPublicIpOnLaunch: 'True'
+      Tags:
+      - Key: Name
+        Value: IPAM RegionOne SubnetTwo
+      VpcId:
+        Ref: ipamVPC
+  ipamSUBNETASSTWO:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: ipamPUBLICROUTE
+      SubnetId:
+        Ref: ipamVPCSUBNETTWO
+  ec2INSTANCEPROFILE:
+    Type: AWS::IAM::ec2INSTANCEPROFILE
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: ec2ROLENAME
+  eniDEVONE:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId:
+        Ref: ipamVPCSUBNETONE
+      GroupSet:
+      - Fn::GetAtt:
+        - ec2SG
+        - GroupId
+  eniDEVTWO:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId:
+        Ref: ipamVPCSUBNETONE
+      GroupSet:
+      - Fn::GetAtt:
+        - ec2SG
+        - GroupId
+  eniPRODONE:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId:
+        Ref: ipamVPCSUBNETTWO
+      GroupSet:
+      - Fn::GetAtt:
+        - ec2SG
+        - GroupId
+  eniPRODTWO:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId:
+        Ref: ipamVPCSUBNETTWO
+      GroupSet:
+      - Fn::GetAtt:
+        - ec2SG
+        - GroupId
+  ec2DEVONE:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-03ca998611da0fe12
+      InstanceType: t3.micro
+      Iamec2INSTANCEPROFILE:
+        Ref: ec2INSTANCEPROFILE
+      NetworkInterfaces:
+      - NetworkInterfaceId:
+          Ref: eniDEVONE
+        DeviceIndex: '0'
+      ec2KEYNAME:
+        Ref: ec2KEYNAME
+      Tags:
+      - Key: Name
+        Value: EC2 Dev Instance One
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+          - "\n"
+          - - "#!/bin/bash"
+            - yum update -y
+            - yum install httpd -y
+            - yum install tcpdump -y
+            - service httpd start
+            - "/etc/init.d/httpd start"
+            - chkconfig --levels 235 httpd on
+            - cd /var/www/html
+            - echo "<html><body style=\"background-color:red;\"><h1><p style=\"color:#FFFFFF\">EC2 Dev Instance One</h1></body></html>" > index.html
+  ec2DEVTWO:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-03ca998611da0fe12
+      InstanceType: t3.micro
+      Iamec2INSTANCEPROFILE:
+        Ref: ec2INSTANCEPROFILE
+      NetworkInterfaces:
+      - NetworkInterfaceId:
+          Ref: eniDEVTWO
+        DeviceIndex: '0'
+      ec2KEYNAME:
+        Ref: ec2KEYNAME
+      Tags:
+      - Key: Name
+        Value: EC2 Dev Instance Two
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+          - "\n"
+          - - "#!/bin/bash"
+            - yum update -y
+            - yum install httpd -y
+            - yum install tcpdump -y
+            - service httpd start
+            - "/etc/init.d/httpd start"
+            - chkconfig --levels 235 httpd on
+            - cd /var/www/html
+            - echo "<html><body style=\"background-color:yellow;\"><h1><p style=\"color:#000000\"> EC2 Dev Instance Two</h1></body></html>" > index.html
+  ec2PRODONE:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-03ca998611da0fe12
+      InstanceType: t3.micro
+      Iamec2INSTANCEPROFILE:
+        Ref: ec2INSTANCEPROFILE
+      NetworkInterfaces:
+      - NetworkInterfaceId:
+          Ref: eniPRODONE
+        DeviceIndex: '0'
+      ec2KEYNAME:
+        Ref: ec2KEYNAME
+      Tags:
+      - Key: Name
+        Value: green.ec2
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+          - "\n"
+          - - "#!/bin/bash"
+            - yum update -y
+            - yum install httpd -y
+            - yum install tcpdump -y
+            - service httpd start
+            - "/etc/init.d/httpd start"
+            - chkconfig --levels 235 httpd on
+            - cd /var/www/html
+            - echo "<html><body style=\"background-color:green;\"><h1><p style=\"color:#FFFFFF\">Hello
+              Cloud Welcome To My Webpage</h1></body></html>" > index.html
+  ec2PRODTWO:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-03ca998611da0fe12
+      InstanceType: t3.micro
+      Iamec2INSTANCEPROFILE:
+        Ref: ec2INSTANCEPROFILE
+      NetworkInterfaces:
+      - NetworkInterfaceId:
+          Ref: eniPRODTWO
+        DeviceIndex: '0'
+      ec2KEYNAME:
+        Ref: ec2KEYNAME
+      Tags:
+      - Key: Name
+        Value: EC2 Prod Instance One
+      UserData:
+        Fn::Base64:
+          Fn::Join:
+          - "\n"
+          - - "#!/bin/bash"
+            - yum update -y
+            - yum install httpd -y
+            - yum install tcpdump -y
+            - service httpd start
+            - "/etc/init.d/httpd start"
+            - chkconfig --levels 235 httpd on
+            - cd /var/www/html
+            - echo "<html><body style=\"background-color:blue;\"><h1><p style=\"color:#FFFFFF\"> EC2 Prod Instance One</h1></body></html>" > index.html
+  ec2SG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP and HTTPS
+      VpcId:
+        Ref: ipamVPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: 0.0.0.0/0
+Outputs:
+  ec2DEVONEURL:
+    Description: URL for ec2DEVONE
+    Value:
+      Fn::Join:
+      - ''
+      - - http://
+        - Fn::GetAtt:
+          - ec2DEVONE
+          - PublicDnsName
+  ec2DEVTWOURL:
+    Description: URL for ec2DEVTWO
+    Value:
+      Fn::Join:
+      - ''
+      - - http://
+        - Fn::GetAtt:
+          - ec2DEVTWO
+          - PublicDnsName
+  ec2PRODONEURL:
+    Description: URL for ec2PRODONE
+    Value:
+      Fn::Join:
+      - ''
+      - - http://
+        - Fn::GetAtt:
+          - ec2PRODONE
+          - PublicDnsName
+  ec2PRODTWOURL:
+    Description: URL for ec2PRODTWO
+    Value:
+      Fn::Join:
+      - ''
+      - - http://
+        - Fn::GetAtt:
+          - ec2PRODTWO
+          - PublicDnsName
