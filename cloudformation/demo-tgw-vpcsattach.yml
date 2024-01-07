@@ -1,0 +1,184 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Author: Alick Li
+  Purpose: Class Demostration
+  Info: This yaml template is used to attach Transit Gateway Demostration to three VPC
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      - Label:
+          default: "VPC Parameters"
+        Parameters:
+          - AvailabilityZoneA
+          - AvailabilityZoneB
+Parameters:
+  ParentStack:
+    Description: "Name of the CFN Stack for VPCs"
+    Type: String
+    Default: "demo-tgw-vpcs"
+  RoleName:
+    Description: EC2 role name
+    Type: String
+    Default: ROLE-SSMAdminAccess
+Resources:
+  # Create Transit Gateway
+  TransitGateway:
+    Type: "AWS::EC2::TransitGateway"
+    Properties:
+      AmazonSideAsn: 65000
+      Description: "TGW Route Integration Test"
+      AutoAcceptSharedAttachments: "enable"
+      DefaultRouteTableAssociation: "disable"
+      DnsSupport: "enable"
+      VpnEcmpSupport: "enable"
+      Tags:
+        - Key: Name
+          Value: !Ref ParentStack
+        - Key: Application
+          Value: !Ref "AWS::StackId"
+
+  # Transit Gateway Route Table Creation
+
+  RouteTableYellow:
+    Type: "AWS::EC2::TransitGatewayRouteTable"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Yellow Route Table
+      TransitGatewayId: !Ref TransitGateway
+
+  RouteTableRed:
+    Type: "AWS::EC2::TransitGatewayRouteTable"
+    Properties:
+      Tags:
+        - Key: Name
+          Value: Red Route Table
+      TransitGatewayId: !Ref TransitGateway
+
+
+  # Non-Prod 1 Connect to the Transit Gateway
+  AttachNP11:
+    Type: "AWS::EC2::TransitGatewayAttachment"
+    Properties:
+      SubnetIds:
+        - Fn::ImportValue: !Sub "NP11-${ParentStack}-AttachSubnet5"
+        - Fn::ImportValue: !Sub "NP11-${ParentStack}-AttachSubnet6"
+      Tags:
+        - Key: Name
+          Value: NP11Attach
+      TransitGatewayId: !Ref TransitGateway
+      VpcId:
+        Fn::ImportValue: !Sub "NP11-${ParentStack}-VPC"
+
+  AssociateNP11RouteTable:
+    Type: "AWS::EC2::TransitGatewayRouteTableAssociation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachNP11
+      TransitGatewayRouteTableId: !Ref RouteTableYellow
+
+  PropagateNP11Yellow:
+    Type: "AWS::EC2::TransitGatewayRouteTablePropagation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachNP11
+      TransitGatewayRouteTableId: !Ref RouteTableYellow
+
+  PropagateNP11Red:
+    Type: "AWS::EC2::TransitGatewayRouteTablePropagation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachNP11
+      TransitGatewayRouteTableId: !Ref RouteTableRed
+
+  # Non-Prod 2 Connect to the Transit Gateway
+  AttachNP12:
+    Type: "AWS::EC2::TransitGatewayAttachment"
+    Properties:
+      SubnetIds:
+        - Fn::ImportValue: !Sub "NP12-${ParentStack}-AttachSubnet5"
+        - Fn::ImportValue: !Sub "NP12-${ParentStack}-AttachSubnet6"
+      Tags:
+        - Key: Name
+          Value: NP12Attach
+      TransitGatewayId: !Ref TransitGateway
+      VpcId:
+        Fn::ImportValue: !Sub "NP12-${ParentStack}-VPC"
+
+  AssociateNP12RouteYellow:
+    Type: "AWS::EC2::TransitGatewayRouteTableAssociation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachNP12
+      TransitGatewayRouteTableId: !Ref RouteTableYellow
+
+  PropagateNP12Yellow:
+    Type: "AWS::EC2::TransitGatewayRouteTablePropagation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachNP12
+      TransitGatewayRouteTableId: !Ref RouteTableYellow
+
+  PropagateNP12Red:
+    Type: "AWS::EC2::TransitGatewayRouteTablePropagation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachNP12
+      TransitGatewayRouteTableId: !Ref RouteTableRed
+
+ # Non-Prod 3 Connect to the Transit Gateway
+  AttachNP13:
+    Type: "AWS::EC2::TransitGatewayAttachment"
+    Properties:
+      SubnetIds:
+        - Fn::ImportValue: !Sub "NP13-${ParentStack}-AttachSubnet5"
+        - Fn::ImportValue: !Sub "NP13-${ParentStack}-AttachSubnet6"
+      Tags:
+        - Key: Name
+          Value: NP13Attach
+      TransitGatewayId: !Ref TransitGateway
+      VpcId:
+        Fn::ImportValue: !Sub "NP13-${ParentStack}-VPC"
+
+  AssociateNP13RouteTable:
+    Type: "AWS::EC2::TransitGatewayRouteTableAssociation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachNP13
+      TransitGatewayRouteTableId: !Ref RouteTableRed
+
+  PropagateNP13Red:
+    Type: "AWS::EC2::TransitGatewayRouteTablePropagation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachNP13
+      TransitGatewayRouteTableId: !Ref RouteTableRed
+
+  PropagateNP13Yellow:
+    Type: "AWS::EC2::TransitGatewayRouteTablePropagation"
+    Properties:
+      TransitGatewayAttachmentId: !Ref AttachNP13
+      TransitGatewayRouteTableId: !Ref RouteTableYellow
+
+  #Route table
+  NP11PrivateDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachNP11
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      TransitGatewayId: !Ref TransitGateway
+      RouteTableId:
+        Fn::ImportValue:
+          !Sub "NP11-${ParentStack}-PrivateRouteTable"
+
+  NP12PrivateDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachNP12
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      TransitGatewayId: !Ref TransitGateway
+      RouteTableId:
+        Fn::ImportValue:
+          !Sub "NP12-${ParentStack}-PrivateRouteTable"
+ 
+  NP13PrivateDefaultRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachNP13
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      TransitGatewayId: !Ref TransitGateway
+      RouteTableId:
+        Fn::ImportValue:
+          !Sub "NP13-${ParentStack}-PrivateRouteTable"
