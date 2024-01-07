@@ -14,22 +14,23 @@ Please take note this stack have no dependancy with IPAM yet as still using "man
 
 **Expected Cloudshell script**
 Go to Cloudshell environment (Singapore) and execute following command
+```
+var='demo-vpc-ipamec2'
+```
+then perform the script execution
 
 ```
-# Download the script from your GitHub repository
-curl -O https://raw.githubusercontent.com/alivk/aws-demo/main/cloudformation/demo-vpc-ipamec2.sh
-# Make the script executable:
-chmod +x demo-vpc-ipamec2.sh
-# Run the script:
-./demo-vpc-ipamec2.sh
+curl -O https://raw.githubusercontent.com/alivk/aws-demo/main/cloudformation/$var.sh
+chmod +x $var.sh
+./$var.sh
 ```
 
 **Expected Ouput**
 ```
-STEP01 - Starting the stack demo-vpc-ipamec2 creation (average time around 93 seconds) ...
+STEP01 - Starting the stack creation (average time around 93 seconds) ...
 STEP02 - Downloading the CloudFormation template...
 STEP03 - Creating the CloudFormation stack...
 STEP04 - Waiting for CloudFormation stack creation to complete... running... 
-STEP05 - The CloudFormation Stack demo-vpc-ipamec2 is Ready!!!
-STEP06 - Stack demo-vpc-ipam completed, Total execution time: 93 seconds
+STEP05 - The CloudFormation Stack is Ready!!!
+STEP06 - Stack completed, Total execution time: 93 seconds
 ```
