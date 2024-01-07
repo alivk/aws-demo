@@ -1,0 +1,357 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Author: Alick Li
+  Purpose: Class Demostration
+  Info: This yaml template is used for test VPC Interface Endpoint.
+Parameters:
+  KeyName:
+    Description: 'Existing EC2 KeyPair :'
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: Can contain only ASCII characters.
+  RoleName:
+    Description: EC2 role name
+    Type: String
+    Default: ROLE-SSMAdminAccess
+    ConstraintDescription: Please specify your IAM role for EC2
+  LatestAmiId:
+    Type: 'AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>'
+    Default: '/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2'
+  VPCCIDRRange:
+    Type: String
+    Default: 10.19.0.0/21
+    Description: 'Enter CIDR /16 for VPC : .'
+  PublicSubnetVPCEndpoint:
+    Type: String
+    Default: 10.19.0.0/24
+    Description: 'Enter CIDR for public subnet : .'
+  PrivateSubnetVPCEndpoint:
+    Type: String
+    Default: 10.19.2.0/23
+    Description: 'Enter CIDR for private subnet : .'
+Resources:
+  EndpointVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock:
+        Ref: VPCCIDRRange
+      EnableDnsHostnames: 'true'
+      EnableDnsSupport: 'true'
+      Tags:
+      - Key: Name
+        Value: VPCEndpoint.vpc
+    Metadata:
+      AWS::CloudFormation::Designer:
+        id: e7306972-eb5f-4291-9c63-fcbf8a4a04fe
+  VPCEndpointIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+      - Key: Name
+        Value: VPCEndpoint.igw
+    Metadata:
+      AWS::CloudFormation::Designer:
+        id: 71ad4f43-5803-4c59-a7c6-fbd60994e63a
+  VPCEndpointAttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: EndpointVPC
+      InternetGatewayId:
+        Ref: VPCEndpointIGW
+    Metadata:
+      AWS::CloudFormation::Designer:
+        id: 419aef3e-377b-48e8-8e69-5041cadf2dc5
+  VPCEndpointPubSubnet:
+    Type: AWS::EC2::Subnet
+    DeletionPolicy: Delete
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+        - '0'
+        - Fn::GetAZs: ''
+      CidrBlock:
+        Ref: PublicSubnetVPCEndpoint
+      MapPublicIpOnLaunch: 'True'
+      Tags:
+      - Key: Name
+        Value: public.VPCEndpoint.subnet
+      VpcId:
+        Ref: EndpointVPC
+    Metadata:
+      AWS::CloudFormation::Designer:
+        id: 60f8a865-48b9-4ce6-b251-17e816c12603
+  VPCEndpointPubSubnetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: EndpointVPC
+      Tags:
+      - Key: Name
+        Value: public.VPCEndpoint.rt
+    Metadata:
+      AWS::CloudFormation::Designer:
+        id: 109c3892-1cdc-47be-853a-97b235ba83d0
+  VPCEndpointPubSubnetRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: VPCEndpointPubSubnetRouteTable
+      SubnetId:
+        Ref: VPCEndpointPubSubnet
+    Metadata:
+      AWS::CloudFormation::Designer:
+        id: f84122bc-5875-42a8-b450-6e36a91c29f7
+  VPCEndpointPublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: VPCEndpointPubSubnetRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: VPCEndpointIGW
+    Metadata:
+      AWS::CloudFormation::Designer:
+        id: a4244528-38a8-4598-868d-c56e4c762fc2
+  VPCEndpointPriSubnet:
+    Type: AWS::EC2::Subnet
+    Metadata:
+      AWS::CloudFormation::Designer:
+        id: d86fe78f-eece-4e7e-89b7-9c99dc16aba0
+    Properties:
+      AvailabilityZone:
+        Fn::Select:
+        - '1'
+        - Fn::GetAZs: ''
+      CidrBlock:
+        Ref: PrivateSubnetVPCEndpoint
+      MapPublicIpOnLaunch: 'False'
+      Tags:
+      - Key: Name
+        Value: private.VPCEndpoint.subnet
+      VpcId:
+        Ref: EndpointVPC
+  VPCEndpointPriSubnetRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: EndpointVPC
+      Tags:
+      - Key: Name
+        Value: private.VPCEndpoint.rt
+
+  VPCEndpointPriSubnetRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: VPCEndpointPriSubnetRouteTable
+      SubnetId:
+        Ref: VPCEndpointPriSubnet
+
+  NATGatewayEIP:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Domain: vpc
+
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NATGatewayEIP.AllocationId
+      SubnetId: !Ref VPCEndpointPubSubnet
+
+  VPCEndpointPriSubnetDefaultRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref VPCEndpointPriSubnetRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NATGateway
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: RoleName
+  PublicENI:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId:
+        Ref: VPCEndpointPubSubnet
+      GroupSet:
+      - Fn::GetAtt:
+        - PublicSecurityGroup
+        - GroupId
+  PrivateENI:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId:
+        Ref: VPCEndpointPriSubnet
+      GroupSet:
+      - Fn::GetAtt:
+        - PrivateSecurityGroup
+        - GroupId
+  PublicInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: t3.micro
+      IamInstanceProfile:
+        Ref: InstanceProfile
+      NetworkInterfaces:
+      - DeviceIndex: '0'
+        SubnetId:
+          Ref: VPCEndpointPubSubnet
+        GroupSet:
+        - Fn::GetAtt:
+          - PublicSecurityGroup
+          - GroupId
+      KeyName:
+        Ref: KeyName
+      Tags:
+      - Key: Name
+        Value: public-instance-for-vpc-endpoint-demo
+
+  PrivateInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: t3.micro
+      IamInstanceProfile:
+        Ref: InstanceProfile
+      NetworkInterfaces:
+      - DeviceIndex: '0'
+        SubnetId:
+          Ref: VPCEndpointPriSubnet
+        GroupSet:
+        - Fn::GetAtt:
+          - PrivateSecurityGroup
+          - GroupId
+        AssociatePublicIpAddress: false 
+      KeyName:
+        Ref: KeyName
+      Tags:
+      - Key: Name
+        Value: private-instance-for-vpc-endpoint-demo
+
+  PublicSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP and HTTPS
+      VpcId:
+        Ref: EndpointVPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '80'
+        ToPort: '80'
+        CidrIp: 0.0.0.0/0
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: 0.0.0.0/0
+  PrivateSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH and Systems Manager Access
+      VpcId:
+        Ref: EndpointVPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '22'
+        ToPort: '22'
+        CidrIp: 10.19.0.0/21
+      - IpProtocol: tcp
+        FromPort: '443'
+        ToPort: '443'
+        CidrIp: 10.19.0.0/21 
+  SSMMessagesVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: 
+        Ref: EndpointVPC
+      ServiceName: 
+        !Sub com.amazonaws.${AWS::Region}.ssmmessages
+      VpcEndpointType: Interface
+      SubnetIds: 
+        - Ref: VPCEndpointPriSubnet
+      SecurityGroupIds: 
+        - Fn::GetAtt: [PrivateSecurityGroup, GroupId]
+      PrivateDnsEnabled: true
+  
+  EC2MessagesVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: 
+        Ref: EndpointVPC
+      ServiceName: 
+        !Sub com.amazonaws.${AWS::Region}.ec2messages
+      VpcEndpointType: Interface
+      SubnetIds: 
+        - Ref: VPCEndpointPriSubnet
+      SecurityGroupIds: 
+        - Fn::GetAtt: [PrivateSecurityGroup, GroupId]
+      PrivateDnsEnabled: true
+
+  SystemsManagerVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: 
+        Ref: EndpointVPC
+      ServiceName: 
+        !Sub com.amazonaws.${AWS::Region}.ssm
+      VpcEndpointType: Interface
+      SubnetIds: 
+        - Ref: VPCEndpointPriSubnet
+      SecurityGroupIds: 
+        - Fn::GetAtt: [PrivateSecurityGroup, GroupId]
+      PrivateDnsEnabled: true
+  KMSVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: 
+        Ref: EndpointVPC
+      ServiceName: 
+        !Sub com.amazonaws.${AWS::Region}.kms
+      VpcEndpointType: Interface
+      SubnetIds: 
+        - Ref: VPCEndpointPriSubnet
+      SecurityGroupIds: 
+        - Fn::GetAtt: [PrivateSecurityGroup, GroupId]
+      PrivateDnsEnabled: true
+  
+  CloudWatchLogsVPCEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId: 
+        Ref: EndpointVPC
+      ServiceName: 
+        !Sub com.amazonaws.${AWS::Region}.logs
+      VpcEndpointType: Interface
+      SubnetIds: 
+        - Ref: VPCEndpointPriSubnet
+      SecurityGroupIds: 
+        - Fn::GetAtt: [PrivateSecurityGroup, GroupId]
+      PrivateDnsEnabled: true
+  S3VPCEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties: 
+      VpcId: 
+        Ref: "EndpointVPC"
+      RouteTableIds: 
+        - Ref: "VPCEndpointPriSubnetRouteTable"
+      ServiceName: 
+        !Sub "com.amazonaws.${AWS::Region}.s3"
+      VpcEndpointType: "Gateway"
+
+Outputs:
+  PublicInstanceIPAddress:
+    Description: 'Public IP address of the public EC2 instance'
+    Value: 
+      Fn::GetAtt: 
+      - PublicInstance
+      - PrivateIp
+  PrivateInstanceIPAddress:
+    Description: 'Private IP address of the private EC2 instance'
+    Value: 
+      Fn::GetAtt: 
+      - PrivateInstance
+      - PrivateIp
