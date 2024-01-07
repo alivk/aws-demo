@@ -1,0 +1,970 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >
+  Author: Alick Li
+  Purpose: Class Demostration
+  Info: This yaml template is used for Transit Gateway Demostration to introduce three VPC
+Metadata:
+  "AWS::CloudFormation::Interface":
+    ParameterGroups:
+      - Label:
+          default: "VPC Parameters"
+        Parameters:
+          - AvailabilityZoneA
+          - AvailabilityZoneB
+Parameters:
+  AvailabilityZoneA:
+    Description: Availability Zone 1
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: us-west-2a
+  AvailabilityZoneB:
+    Description: Availability Zone 2
+    Type: AWS::EC2::AvailabilityZone::Name
+    Default: us-west-2b
+  RoleName:
+    Description: EC2 role name
+    Type: String
+    Default: ROLE-SSMAdminAccess
+Mappings:
+  RegionMap:
+    'us-east-1':
+      AMI: "ami-03a6eaae9938c858c"
+    'us-east-2':
+      AMI: "ami-0d406e26e5ad4de53"
+    'us-west-1':
+      AMI: "ami-06d2c6c1b5cbaee5f"
+    'us-west-2':
+      AMI: "ami-0f3769c8d8429942f"
+Resources:
+  # Non-Prod 11 Resources
+  VPCNonProd11:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: "10.11.0.0/16"
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: NP-VPC11
+        - Key: project
+          Value: TGW-Demo
+
+  PublicSubnet1NP11:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd11
+      CidrBlock: "10.11.1.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneA
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP11, Nile, Pub-1 Subnet]]
+
+  PublicSubnet2NP11:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd11
+      CidrBlock: "10.11.2.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneB
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP11, Nile, Pub-2 Subnet]]
+
+  PublicSubnetRouteTableNP11:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCNonProd11
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP11, Nile, Public Route Table]]
+
+  Public1SubnetRouteTableAssociationNP11:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PublicSubnetRouteTableNP11
+      SubnetId:
+        Ref: PublicSubnet1NP11
+
+  Public2SubnetRouteTableAssociationNP11:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PublicSubnetRouteTableNP11
+      SubnetId:
+        Ref: PublicSubnet2NP11
+
+  PrivateSubnet3NP11:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd11
+      CidrBlock: "10.11.3.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP11, Nile, Priv-3 Subnet]]
+
+  PrivateSubnet4NP11:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd11
+      CidrBlock: "10.11.4.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP11, Nile, Priv-4 Subnet]]
+
+  PrivateSubnetRouteTableNP11:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCNonProd11
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP11, Nile, Private Route Table]]
+
+  Private3SubnetRouteTableAssociationNP11:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateSubnetRouteTableNP11
+      SubnetId:
+        Ref: PrivateSubnet3NP11
+
+  Private4SubnetRouteTableAssociationNP11:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateSubnetRouteTableNP11
+      SubnetId:
+        Ref: PrivateSubnet4NP11
+
+
+  InstanceProfileNP11:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - !Ref RoleName
+
+#ICMP is allowed from anywhere within 10.0.0.0 address space (not recommended for real environments) 
+  NP11Ec2SecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open-up ports for ICMP and SSH from 10.x.x.x
+      GroupName: !Join ["-", [NP11, Nile, "EC2-sec-group"]]
+      VpcId:
+        Ref: VPCNonProd11
+      SecurityGroupIngress:
+        - IpProtocol: icmp
+          CidrIp: 10.0.0.0/8
+          FromPort: "-1"
+          ToPort: "-1"
+        - IpProtocol: tcp
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: 10.22.0.0/16
+
+  ServerEc2NP11:
+    Type: AWS::EC2::Instance
+    DependsOn: PrivateSubnet4NP11
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet4NP11
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+      PrivateIpAddress: 10.11.4.100
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - Ref: NP11Ec2SecGroup
+      IamInstanceProfile:
+        Ref: InstanceProfileNP11
+      Tags:
+        - Key: Name
+          Value: !Sub "NP11-${AWS::StackName}-Server"
+
+  AttachSubnet5NP11:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd11
+      CidrBlock: "10.11.5.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP11, Nile, Attach-5 Subnet]]
+
+  AttachSubnet6NP11:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd11
+      CidrBlock: "10.11.6.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP11, Nile, Attach-B Subnet]]
+
+  AttachSubnetRouteTableNP11:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCNonProd11
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP11, Nile, Attach Route Table]]
+
+  Attach5SubnetRouteTableAssociationNP11:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: AttachSubnetRouteTableNP11
+      SubnetId:
+        Ref: AttachSubnet5NP11
+
+  Attach6SubnetRouteTableAssociationNP11:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: AttachSubnetRouteTableNP11
+      SubnetId:
+        Ref: AttachSubnet6NP11
+
+
+  EndpointSecGroupNP11:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open-up ports for local VPC
+      GroupName: !Join ["-", [NP11, Nile, "vpc-sec-group"]]
+      VpcId:
+        Ref: VPCNonProd11
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "1"
+          ToPort: "65535"
+          CidrIp: 10.11.0.0/16
+        - IpProtocol: udp
+          FromPort: "1"
+          ToPort: "65535"
+          CidrIp: 10.11.0.0/16
+
+  SSMEndpointNP11:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Ref: VPCNonProd11
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: True
+      SubnetIds:
+        - Ref: AttachSubnet5NP11
+        - Ref: AttachSubnet6NP11
+      SecurityGroupIds:
+        - Ref: EndpointSecGroupNP11
+
+  SSMMEndpointNP11:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Ref: VPCNonProd11
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: True
+      SubnetIds:
+        - Ref: AttachSubnet5NP11
+        - Ref: AttachSubnet6NP11
+      SecurityGroupIds:
+        - Ref: EndpointSecGroupNP11
+
+  # Non-Prod 12 Resources
+  VPCNonProd12:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: "10.12.0.0/16"
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: NP-VPC12
+        - Key: project
+          Value: TGW-Demo
+
+  PublicSubnet1NP12:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd12
+      CidrBlock: "10.12.1.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneA
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP12, Nile, Pub-1 Subnet]]
+
+  PublicSubnet2NP12:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd12
+      CidrBlock: "10.12.2.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneB
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP12, Nile, Pub-2 Subnet]]
+
+  PublicSubnetRouteTableNP12:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCNonProd12
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP12, Nile, Public Route Table]]
+
+  Public1SubnetRouteTableAssociationNP12:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PublicSubnetRouteTableNP12
+      SubnetId:
+        Ref: PublicSubnet1NP12
+
+  Public2SubnetRouteTableAssociationNP12:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PublicSubnetRouteTableNP12
+      SubnetId:
+        Ref: PublicSubnet2NP12
+
+  PrivateSubnet3NP12:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd12
+      CidrBlock: "10.12.3.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP12, Nile, Priv-3 Subnet]]
+
+  PrivateSubnet4NP12:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd12
+      CidrBlock: "10.12.4.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP12, Nile, Priv-4 Subnet]]
+
+  PrivateSubnetRouteTableNP12:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCNonProd12
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP12, Nile, Private Route Table]]
+
+  Private3SubnetRouteTableAssociationNP12:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateSubnetRouteTableNP12
+      SubnetId:
+        Ref: PrivateSubnet3NP12
+
+  Private4SubnetRouteTableAssociationNP12:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateSubnetRouteTableNP12
+      SubnetId:
+        Ref: PrivateSubnet4NP12
+
+
+  InstanceProfileNP12:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - !Ref RoleName
+
+  #ICMP is allowed from anywhere within 10.0.0.0 address space (not recommended for real environments) 
+  NP12Ec2SecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open-up ports for ICMP and SSH from 10.x.x.x
+      GroupName: !Join ["-", [NP12, Nile, "EC2-sec-group"]]
+      VpcId:
+        Ref: VPCNonProd12
+      SecurityGroupIngress:
+        - IpProtocol: icmp
+          CidrIp: 10.0.0.0/8
+          FromPort: "-1"
+          ToPort: "-1"
+        - IpProtocol: tcp
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: 10.22.0.0/16
+
+  ServerEc2NP12:
+    Type: AWS::EC2::Instance
+    DependsOn: PrivateSubnet4NP12
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet4NP12
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+      PrivateIpAddress: 10.12.4.100
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - Ref: NP12Ec2SecGroup
+      IamInstanceProfile:
+        Ref: InstanceProfileNP12
+      Tags:
+        - Key: Name
+          Value: !Sub "NP12-${AWS::StackName}-Server"
+
+  AttachSubnet5NP12:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd12
+      CidrBlock: "10.12.5.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP12, Nile, Attach-5 Subnet]]
+
+  AttachSubnet6NP12:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd12
+      CidrBlock: "10.12.6.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP12, Nile, Attach-B Subnet]]
+
+  AttachSubnetRouteTableNP12:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCNonProd12
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP12, Nile, Attach Route Table]]
+
+  Attach5SubnetRouteTableAssociationNP12:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: AttachSubnetRouteTableNP12
+      SubnetId:
+        Ref: AttachSubnet5NP12
+
+  Attach6SubnetRouteTableAssociationNP12:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: AttachSubnetRouteTableNP12
+      SubnetId:
+        Ref: AttachSubnet6NP12
+
+
+  EndpointSecGroupNP12:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open-up ports for local VPC
+      GroupName: !Join ["-", [NP12, Nile, "vpc-sec-group"]]
+      VpcId:
+        Ref: VPCNonProd12
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "1"
+          ToPort: "65535"
+          CidrIp: 10.12.0.0/16
+        - IpProtocol: udp
+          FromPort: "1"
+          ToPort: "65535"
+          CidrIp: 10.12.0.0/16
+
+  SSMEndpointNP12:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Ref: VPCNonProd12
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: True
+      SubnetIds:
+        - Ref: AttachSubnet5NP12
+        - Ref: AttachSubnet6NP12
+      SecurityGroupIds:
+        - Ref: EndpointSecGroupNP12
+
+  SSMMEndpointNP12:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Ref: VPCNonProd12
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: True
+      SubnetIds:
+        - Ref: AttachSubnet5NP12
+        - Ref: AttachSubnet6NP12
+      SecurityGroupIds:
+        - Ref: EndpointSecGroupNP12
+
+  # Non-Prod 13 Resources
+  VPCNonProd13:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: "10.13.0.0/16"
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags:
+        - Key: Name
+          Value: NP-VPC13
+        - Key: project
+          Value: TGW-Demo
+
+  PublicSubnet1NP13:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd13
+      CidrBlock: "10.13.1.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneA
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP13, Nile, Pub-1 Subnet]]
+
+  PublicSubnet2NP13:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd13
+      CidrBlock: "10.13.2.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneB
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP13, Nile, Pub-2 Subnet]]
+
+  PublicSubnetRouteTableNP13:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCNonProd13
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP13, Nile, Public Route Table]]
+
+  Public1SubnetRouteTableAssociationNP13:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PublicSubnetRouteTableNP13
+      SubnetId:
+        Ref: PublicSubnet1NP13
+
+  Public2SubnetRouteTableAssociationNP13:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PublicSubnetRouteTableNP13
+      SubnetId:
+        Ref: PublicSubnet2NP13
+
+  PrivateSubnet3NP13:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd13
+      CidrBlock: "10.13.3.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP13, Nile, Priv-3 Subnet]]
+
+  PrivateSubnet4NP13:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd13
+      CidrBlock: "10.13.4.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP13, Nile, Priv-4 Subnet]]
+
+  PrivateSubnetRouteTableNP13:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCNonProd13
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP13, Nile, Private Route Table]]
+
+  Private3SubnetRouteTableAssociationNP13:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateSubnetRouteTableNP13
+      SubnetId:
+        Ref: PrivateSubnet3NP13
+
+  Private4SubnetRouteTableAssociationNP13:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: PrivateSubnetRouteTableNP13
+      SubnetId:
+        Ref: PrivateSubnet4NP13
+
+
+  InstanceProfileNP13:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - !Ref RoleName
+
+  #ICMP is allowed from anywhere within 10.0.0.0 address space (not recommended for real environments) 
+  NP13Ec2SecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open-up ports for ICMP and SSH from 10.x.x.x
+      GroupName: !Join ["-", [NP13, Nile, "EC2-sec-group"]]
+      VpcId:
+        Ref: VPCNonProd13
+      SecurityGroupIngress:
+        - IpProtocol: icmp
+          CidrIp: 10.0.0.0/8
+          FromPort: "-1"
+          ToPort: "-1"
+        - IpProtocol: tcp
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: 10.22.0.0/16
+
+  ServerEc2NP13:
+    Type: AWS::EC2::Instance
+    DependsOn: PrivateSubnet4NP13
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnet4NP13
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AMI]
+      PrivateIpAddress: 10.13.4.100
+      InstanceType: t2.micro
+      SecurityGroupIds:
+        - Ref: NP13Ec2SecGroup
+      IamInstanceProfile:
+        Ref: InstanceProfileNP13
+      Tags:
+        - Key: Name
+          Value: !Sub "NP13-${AWS::StackName}-Server"
+
+  AttachSubnet5NP13:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd13
+      CidrBlock: "10.13.5.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneA
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP13, Nile, Attach-5 Subnet]]
+
+  AttachSubnet6NP13:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId:
+        Ref: VPCNonProd13
+      CidrBlock: "10.13.6.0/24"
+      AvailabilityZone:
+        Ref: AvailabilityZoneB
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP13, Nile, Attach-B Subnet]]
+
+  AttachSubnetRouteTableNP13:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPCNonProd13
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [NP13, Nile, Attach Route Table]]
+
+  Attach5SubnetRouteTableAssociationNP13:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: AttachSubnetRouteTableNP13
+      SubnetId:
+        Ref: AttachSubnet5NP13
+
+  Attach6SubnetRouteTableAssociationNP13:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: AttachSubnetRouteTableNP13
+      SubnetId:
+        Ref: AttachSubnet6NP13
+
+
+  EndpointSecGroupNP13:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open-up ports for local VPC
+      GroupName: !Join ["-", [NP13, Nile, "vpc-sec-group"]]
+      VpcId:
+        Ref: VPCNonProd13
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "1"
+          ToPort: "65535"
+          CidrIp: 10.13.0.0/16
+        - IpProtocol: udp
+          FromPort: "1"
+          ToPort: "65535"
+          CidrIp: 10.13.0.0/16
+
+  SSMEndpointNP13:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Ref: VPCNonProd13
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: True
+      SubnetIds:
+        - Ref: AttachSubnet5NP13
+        - Ref: AttachSubnet6NP13
+      SecurityGroupIds:
+        - Ref: EndpointSecGroupNP13
+
+  SSMMEndpointNP13:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      VpcId:
+        Ref: VPCNonProd13
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: True
+      SubnetIds:
+        - Ref: AttachSubnet5NP13
+        - Ref: AttachSubnet6NP13
+      SecurityGroupIds:
+        - Ref: EndpointSecGroupNP13
+
+
+
+Outputs:
+  # Non-Prod 11 Outputs
+  VPCNonProd11:
+    Description: "The Created VPC"
+    Value: !Ref VPCNonProd11
+    Export:
+      Name: !Sub "NP11-${AWS::StackName}-VPC"
+  AttachSubnet5NP11:
+    Description: "NP11 Attach Subnet 5"
+    Value: !Ref AttachSubnet5NP11
+    Export:
+      Name: !Sub "NP11-${AWS::StackName}-AttachSubnet5"
+  AttachSubnet6NP11:
+    Description: "NP11 Attach Subnet 6"
+    Value: !Ref AttachSubnet6NP11
+    Export:
+      Name: !Sub "NP11-${AWS::StackName}-AttachSubnet6"
+  PrivateSubnetRouteTableNP11:
+    Description: "NP11 Private Route Table"
+    Value: !Ref PrivateSubnetRouteTableNP11
+    Export:
+      Name: !Sub "NP11-${AWS::StackName}-PrivateRouteTable"
+  ServerNP11:
+    Description: "NP11 EC2 IP address"
+    Value: !GetAtt ServerEc2NP11.PrivateIp
+    Export:
+      Name: !Sub "NP11-${AWS::StackName}-ServerIP"
+
+  # Non-Prod 12 Outputs
+  VPCNonProd12:
+    Description: "The Created VPC"
+    Value: !Ref VPCNonProd12
+    Export:
+      Name: !Sub "NP12-${AWS::StackName}-VPC"
+  AttachSubnet5NP12:
+    Description: "NP12 Attach Subnet 5"
+    Value: !Ref AttachSubnet5NP12
+    Export:
+      Name: !Sub "NP12-${AWS::StackName}-AttachSubnet5"
+  AttachSubnet6NP12:
+    Description: "NP12 Attach Subnet 6"
+    Value: !Ref AttachSubnet6NP12
+    Export:
+      Name: !Sub "NP12-${AWS::StackName}-AttachSubnet6"
+  PrivateSubnetRouteTableNP12:
+    Description: "NP12 Private Route Table"
+    Value: !Ref PrivateSubnetRouteTableNP12
+    Export:
+      Name: !Sub "NP12-${AWS::StackName}-PrivateRouteTable"
+  ServerNP12:
+    Description: "NP12 EC2 IP address"
+    Value: !GetAtt ServerEc2NP12.PrivateIp
+    Export:
+      Name: !Sub "NP12-${AWS::StackName}-ServerIP"
+
+  
+  # Non-Prod 13 Outputs
+  VPCNonProd13:
+    Description: "The Created VPC"
+    Value: !Ref VPCNonProd13
+    Export:
+      Name: !Sub "NP13-${AWS::StackName}-VPC"
+  AttachSubnet5NP13:
+    Description: "NP13 Attach Subnet 5"
+    Value: !Ref AttachSubnet5NP13
+    Export:
+      Name: !Sub "NP13-${AWS::StackName}-AttachSubnet5"
+  AttachSubnet6NP13:
+    Description: "NP13 Attach Subnet 6"
+    Value: !Ref AttachSubnet6NP13
+    Export:
+      Name: !Sub "NP13-${AWS::StackName}-AttachSubnet6"
+  PrivateSubnetRouteTableNP13:
+    Description: "NP13 Private Route Table"
+    Value: !Ref PrivateSubnetRouteTableNP13
+    Export:
+      Name: !Sub "NP13-${AWS::StackName}-PrivateRouteTable"
+  ServerNP13:
+    Description: "NP13 EC2 IP address"
+    Value: !GetAtt ServerEc2NP13.PrivateIp
+    Export:
+      Name: !Sub "NP13-${AWS::StackName}-ServerIP"
+
+  #NP11 Outputs
+  PublicSubnet1NP11:
+    Description: "NP11 Public Subnet 1"
+    Value: !Ref PublicSubnet1NP11
+    Export:
+      Name: !Sub "NP11-${AWS::StackName}-PublicSubnetA"
+  PublicSubnet2NP11:
+    Description: "NP11 Public Subnet 2"
+    Value: !Ref PublicSubnet2NP11
+    Export:
+      Name: !Sub "NP11-${AWS::StackName}-PublicSubnetB"
+  PrivateSubnet3NP11:
+    Description: "NP11 Private Subnet 3"
+    Value: !Ref PrivateSubnet3NP11
+    Export:
+      Name: !Sub "NP11-${AWS::StackName}-PrivateSubnetA"
+  PrivateSubnet4NP11:
+    Description: "NP11 Private Subnet 4"
+    Value: !Ref PrivateSubnet4NP11
+    Export:
+      Name: !Sub "NP11-${AWS::StackName}-PrivateSubnetB"  
+  PrivateSubnetRouteTableNP11:
+    Description: "NP11 Private Route Table"
+    Value: !Ref PrivateSubnetRouteTableNP11
+    Export:
+      Name: !Sub "NP11-${AWS::StackName}-PrivateRouteTable"
+      
+  #NP12 Outputs
+  PublicSubnet1NP12:
+    Description: "NP12 Public Subnet 1"
+    Value: !Ref PublicSubnet1NP12
+    Export:
+      Name: !Sub "NP12-${AWS::StackName}-PublicSubnetA"
+  PublicSubnet2NP12:
+    Description: "NP12 Public Subnet 2"
+    Value: !Ref PublicSubnet2NP12
+    Export:
+      Name: !Sub "NP12-${AWS::StackName}-PublicSubnetB"
+  PrivateSubnet3NP12:
+    Description: "NP12 Private Subnet 3"
+    Value: !Ref PrivateSubnet3NP12
+    Export:
+      Name: !Sub "NP12-${AWS::StackName}-PrivateSubnetA"
+  PrivateSubnet4NP12:
+    Description: "NP12 Private Subnet 4"
+    Value: !Ref PrivateSubnet4NP12
+    Export:
+      Name: !Sub "NP12-${AWS::StackName}-PrivateSubnetB"  
+  PrivateSubnetRouteTableNP12:
+    Description: "NP12 Private Route Table"
+    Value: !Ref PrivateSubnetRouteTableNP12
+    Export:
+      Name: !Sub "NP12-${AWS::StackName}-PrivateRouteTable"
+
+  #NP13 Outputs
+  PublicSubnet1NP13:
+    Description: "NP13 Public Subnet 1"
+    Value: !Ref PublicSubnet1NP13
+    Export:
+      Name: !Sub "NP13-${AWS::StackName}-PublicSubnetA"
+  PublicSubnet2NP13:
+    Description: "NP13 Public Subnet 2"
+    Value: !Ref PublicSubnet2NP13
+    Export:
+      Name: !Sub "NP13-${AWS::StackName}-PublicSubnetB"
+  PrivateSubnet3NP13:
+    Description: "NP13 Private Subnet 3"
+    Value: !Ref PrivateSubnet3NP13
+    Export:
+      Name: !Sub "NP13-${AWS::StackName}-PrivateSubnetA"
+  PrivateSubnet4NP13:
+    Description: "NP13 Private Subnet 4"
+    Value: !Ref PrivateSubnet4NP13
+    Export:
+      Name: !Sub "NP13-${AWS::StackName}-PrivateSubnetB"  
+  PrivateSubnetRouteTableNP13:
+    Description: "NP13 Private Route Table"
+    Value: !Ref PrivateSubnetRouteTableNP13
+    Export:
+      Name: !Sub "NP13-${AWS::StackName}-PrivateRouteTable"
