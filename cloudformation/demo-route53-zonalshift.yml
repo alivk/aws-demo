@@ -32,6 +32,8 @@ Mappings:
     t3.medium:
       Arch: HVM64
   AWSRegionArch2AMI:
+    ap-southeast-1:
+      HVM64: ami-094bbd9e922dc515d
     us-east-1:
       HVM64: ami-09d3b3274b6c5d4aa
     us-east-2:
