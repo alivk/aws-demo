@@ -4,7 +4,7 @@
 # Step 01: Start the timer
 
 start_time=$(date +%s)
-stack_name="demo-vpc-endpoint-interface"
+stack_name="demo-vpc-endpoints"
 echo "STEP01 - Starting the stack "$stack_name" creation (average time around 93 seconds) ..."
 
 
