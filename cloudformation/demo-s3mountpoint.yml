@@ -1,0 +1,187 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Author: Alick Li
+  Purpose: Class Demostration
+  Info: This yaml template is used for S3mountpoint demostration.
+
+Parameters:
+  AlAmiID:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Description: 'The ID of the AMI.'
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+  AlCidrIp:
+    Type: String
+    Description: 'The CIDR IP range that is allowed to access the instance.'
+    Default: 0.0.0.0/0
+
+Resources:
+  AlVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+  AlSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AlVPC
+      CidrBlock: 10.0.1.0/24
+  AlSSMIAMRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: "AlSSMIAMRoleExtraPolicy"
+      Roles: [!Ref AlSSMIAMRole]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "VisualEditor0"
+            Effect: "Allow"
+            Action: "s3express:*"
+            Resource: "*"
+          - Sid: "VisualEditor1"
+            Effect: "Allow"
+            Action: "kms:*"
+            Resource: "*"
+  AlSSMIAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+
+  AlInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - !Ref AlSSMIAMRole
+
+  AlEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile: !Ref AlInstanceProfile
+      ImageId: !Ref AlAmiID
+      InstanceType: t2.micro
+      Tags:
+        - Key: Name
+          Value: s3-mountpoint
+      SubnetId: !Ref AlSubnet
+      SecurityGroupIds:
+        - !GetAtt AlSecurityGroup.GroupId
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          # Update and install necessary packages
+          yum update -y
+          yum install -y httpd php wget tar xz
+      
+          # Start and enable HTTP service
+          systemctl start httpd
+          systemctl enable httpd
+      
+          # Permissions and ownership settings for Apache
+          usermod -a -G apache ec2-user
+          chown -R ec2-user:apache /var/www
+          chmod 2775 /var/www
+          find /var/www -type d -exec chmod 2775 {} \;
+          find /var/www -type f -exec chmod 0664 {} \;
+      
+          # PHP script to display Instance ID, Availability Zone, and the Image
+          cat << 'EOF' > /var/www/html/index.php
+            <!DOCTYPE html>
+            <html>
+            <body>
+            <center>
+              <h2>Johor-Singapore Causeway Traffic</h2>
+              <img src="aws.gif" alt="AWS Image">
+            
+              <?php
+              # Function to get a token for IMDSv2
+              function get_imdsv2_token() {
+                  $ch = curl_init();
+                  curl_setopt($ch, CURLOPT_URL, "http://169.254.169.254/latest/api/token");
+                  curl_setopt($ch, CURLOPT_HTTPHEADER, array("X-aws-ec2-metadata-token-ttl-seconds: 21600"));
+                  curl_setopt($ch, CURLOPT_CUSTOMREQUEST, "PUT");
+                  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                  $token = curl_exec($ch);
+                  curl_close($ch);
+                  return $token;
+              }
+            
+              # Function to get metadata using IMDSv2
+              function get_instance_metadata($path, $token) {
+                  $ch = curl_init();
+                  curl_setopt($ch, CURLOPT_URL, "http://169.254.169.254/latest/meta-data/" . $path);
+                  curl_setopt($ch, CURLOPT_HTTPHEADER, array("X-aws-ec2-metadata-token: " . $token));
+                  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                  $result = curl_exec($ch);
+                  curl_close($ch);
+                  return $result;
+              }
+            
+              $token = get_imdsv2_token();
+            
+              # Get the instance ID and Availability Zone using IMDSv2
+              $instance_id = get_instance_metadata("instance-id", $token);
+              $zone = get_instance_metadata("placement/availability-zone", $token);
+              ?>
+              <h2>EC2 Instance ID: <?php echo $instance_id ?></h2>
+              <h2>Availability Zone: <?php echo $zone ?></h2>
+            </center>
+            </body>
+            </html>
+          EOF
+          
+          # Install FFmpeg if not already installed
+          if ! command -v ffmpeg &> /dev/null
+          then
+              cd /usr/local/bin
+              mkdir -p ffmpeg
+              cd ffmpeg
+              wget https://johnvansickle.com/ffmpeg/builds/ffmpeg-git-amd64-static.tar.xz
+              tar -xf ffmpeg-git-amd64-static.tar.xz --strip-components=1
+              ln -s /usr/local/bin/ffmpeg/ffmpeg /usr/bin/ffmpeg
+          fi
+      
+          # Verify FFmpeg installation
+          ffmpeg -version
+
+
+  AlSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Enable HTTP access via port 80'
+      VpcId: !Ref AlVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: !Ref AlCidrIp
+
+  AlElasticIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref AlEC2Instance
+
+Outputs:
+  PublicDNS:
+    Description: 'Public DNS of EC2 instance'
+    Value: !GetAtt AlEC2Instance.PublicDnsName
+
+  ElasticIP:
+    Description: 'Elastic IP assigned to EC2'
+    Value: !Ref AlElasticIP
+
+  WebsiteURL:
+    Value: !Sub http://${AlElasticIP}
+    Description: Application URL
