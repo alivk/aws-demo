@@ -27,6 +27,28 @@ Resources:
     Properties:
       VpcId: !Ref AlVPC
       CidrBlock: 10.0.1.0/24
+  AlInternetGateway:
+    Type: AWS::EC2::InternetGateway
+  AlVPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref AlInternetGateway
+      VpcId: !Ref AlVPC
+  AlRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AlVPC
+  AlRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref AlInternetGateway
+      RouteTableId: !Ref AlRouteTable
+  AlSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref AlSubnet
+      RouteTableId: !Ref AlRouteTable
   AlSSMIAMRolePolicy:
     Type: AWS::IAM::Policy
     Properties:
