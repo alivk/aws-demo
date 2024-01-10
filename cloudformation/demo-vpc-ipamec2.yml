@@ -177,14 +177,19 @@ Resources:
           Fn::Join:
           - "\n"
           - - "#!/bin/bash"
-            - yum update -y
-            - yum install httpd -y
-            - yum install tcpdump -y
-            - service httpd start
+            - "exec > >(tee /var/log/userdata.log|logger -t user-data -s 2>/dev/console) 2>&1"
+            - "echo 'Starting UserData script execution'"
+            - "yum update -y"
+            - "yum install httpd -y"
+            - "yum install tcpdump -y"
+            - "service httpd start"
             - "/etc/init.d/httpd start"
-            - chkconfig --levels 235 httpd on
-            - cd /var/www/html
-            - echo "<html><body style=\"background-color:blue;\"><h1><p style=\"color:#FFFFFF\">EC2 Dev Instance One</h1></body></html>" > index.html
+            - "chkconfig --levels 235 httpd on"
+            - "mkdir -p /var/www/html"
+            - "echo 'Checking if /var/www/html exists'"
+            - "if [ -d /var/www/html ]; then echo '/var/www/html directory exists'; else echo '/var/www/html directory does not exist'; exit 1; fi"
+            - "echo \"<html><body style='background-color:blue;'><h1><p style='color:#FFFFFF'>EC2 Dev Instance One</h1></body></html>\" > /var/www/html/index.html"
+            - "echo 'UserData script execution completed'"
   ec2DEVTWO:
     Type: AWS::EC2::Instance
     Properties:
@@ -206,14 +211,19 @@ Resources:
           Fn::Join:
           - "\n"
           - - "#!/bin/bash"
-            - yum update -y
-            - yum install httpd -y
-            - yum install tcpdump -y
-            - service httpd start
+            - "exec > >(tee /var/log/userdata.log|logger -t user-data -s 2>/dev/console) 2>&1"
+            - "echo 'Starting UserData script execution'"
+            - "yum update -y"
+            - "yum install httpd -y"
+            - "yum install tcpdump -y"
+            - "service httpd start"
             - "/etc/init.d/httpd start"
-            - chkconfig --levels 235 httpd on
-            - cd /var/www/html
-            - echo "<html><body style=\"background-color:green;\"><h1><p style=\"color:#000000\"> EC2 Dev Instance Two</h1></body></html>" > index.html
+            - "chkconfig --levels 235 httpd on"
+            - "mkdir -p /var/www/html"
+            - "echo 'Checking if /var/www/html exists'"
+            - "if [ -d /var/www/html ]; then echo '/var/www/html directory exists'; else echo '/var/www/html directory does not exist'; exit 1; fi"
+            - "echo \"<html><body style='background-color:green;'><h1><p style='color:#FFFFFF'>EC2 Dev Instance Two</h1></body></html>\" > /var/www/html/index.html"
+            - "echo 'UserData script execution completed'"
   ec2PRODONE:
     Type: AWS::EC2::Instance
     Properties:
@@ -235,15 +245,19 @@ Resources:
           Fn::Join:
           - "\n"
           - - "#!/bin/bash"
-            - yum update -y
-            - yum install httpd -y
-            - yum install tcpdump -y
-            - service httpd start
+            - "exec > >(tee /var/log/userdata.log|logger -t user-data -s 2>/dev/console) 2>&1"
+            - "echo 'Starting UserData script execution'"
+            - "yum update -y"
+            - "yum install httpd -y"
+            - "yum install tcpdump -y"
+            - "service httpd start"
             - "/etc/init.d/httpd start"
-            - chkconfig --levels 235 httpd on
-            - cd /var/www/html
-            - echo "<html><body style=\"background-color:black;\"><h1><p style=\"color:#FFFFFF\">Hello
-              Cloud Welcome To My Webpage</h1></body></html>" > index.html
+            - "chkconfig --levels 235 httpd on"
+            - "mkdir -p /var/www/html"
+            - "echo 'Checking if /var/www/html exists'"
+            - "if [ -d /var/www/html ]; then echo '/var/www/html directory exists'; else echo '/var/www/html directory does not exist'; exit 1; fi"
+            - "echo \"<html><body style='background-color:black;'><h1><p style='color:#FFFFFF'>EC2 Prod Instance One</h1></body></html>\" > /var/www/html/index.html"
+            - "echo 'UserData script execution completed'"
   ec2PRODTWO:
     Type: AWS::EC2::Instance
     Properties:
@@ -265,14 +279,19 @@ Resources:
           Fn::Join:
           - "\n"
           - - "#!/bin/bash"
-            - yum update -y
-            - yum install httpd -y
-            - yum install tcpdump -y
-            - service httpd start
+            - "exec > >(tee /var/log/userdata.log|logger -t user-data -s 2>/dev/console) 2>&1"
+            - "echo 'Starting UserData script execution'"
+            - "yum update -y"
+            - "yum install httpd -y"
+            - "yum install tcpdump -y"
+            - "service httpd start"
             - "/etc/init.d/httpd start"
-            - chkconfig --levels 235 httpd on
-            - cd /var/www/html
-            - echo "<html><body style=\"background-color:orange;\"><h1><p style=\"color:#FFFFFF\"> EC2 Prod Instance One</h1></body></html>" > index.html
+            - "chkconfig --levels 235 httpd on"
+            - "mkdir -p /var/www/html"
+            - "echo 'Checking if /var/www/html exists'"
+            - "if [ -d /var/www/html ]; then echo '/var/www/html directory exists'; else echo '/var/www/html directory does not exist'; exit 1; fi"
+            - "echo \"<html><body style='background-color:orange;'><h1><p style='color:#FFFFFF'>EC2 Prod Instance Two</h1></body></html>\" > /var/www/html/index.html"
+            - "echo 'UserData script execution completed'"
   ec2SG:
     Type: AWS::EC2::SecurityGroup
     Properties:
