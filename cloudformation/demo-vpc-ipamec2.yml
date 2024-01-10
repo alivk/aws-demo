@@ -4,6 +4,9 @@ Description: >
   Author: Alick Li
   Purpose: Class Demostration
   Info: This yaml template is used to add resource on top of demo-vpc-ipam.yml template
+        and we make sure
+        chrome user  -> goes to ec2PRODONE(black) and ec2PRODTWO(orange) instances
+        firefox user -> goes to ec2DEVONE(blue) and ec2DEVTWO(green) instances
 Parameters:
   ec2KEYNAME:
     Description: 'Please Enter Existing EC2 KeyPair :'
@@ -181,7 +184,7 @@ Resources:
             - "/etc/init.d/httpd start"
             - chkconfig --levels 235 httpd on
             - cd /var/www/html
-            - echo "<html><body style=\"background-color:red;\"><h1><p style=\"color:#FFFFFF\">EC2 Dev Instance One</h1></body></html>" > index.html
+            - echo "<html><body style=\"background-color:blue;\"><h1><p style=\"color:#FFFFFF\">EC2 Dev Instance One</h1></body></html>" > index.html
   ec2DEVTWO:
     Type: AWS::EC2::Instance
     Properties:
@@ -210,7 +213,7 @@ Resources:
             - "/etc/init.d/httpd start"
             - chkconfig --levels 235 httpd on
             - cd /var/www/html
-            - echo "<html><body style=\"background-color:yellow;\"><h1><p style=\"color:#000000\"> EC2 Dev Instance Two</h1></body></html>" > index.html
+            - echo "<html><body style=\"background-color:green;\"><h1><p style=\"color:#000000\"> EC2 Dev Instance Two</h1></body></html>" > index.html
   ec2PRODONE:
     Type: AWS::EC2::Instance
     Properties:
@@ -239,7 +242,7 @@ Resources:
             - "/etc/init.d/httpd start"
             - chkconfig --levels 235 httpd on
             - cd /var/www/html
-            - echo "<html><body style=\"background-color:green;\"><h1><p style=\"color:#FFFFFF\">Hello
+            - echo "<html><body style=\"background-color:black;\"><h1><p style=\"color:#FFFFFF\">Hello
               Cloud Welcome To My Webpage</h1></body></html>" > index.html
   ec2PRODTWO:
     Type: AWS::EC2::Instance
@@ -269,7 +272,7 @@ Resources:
             - "/etc/init.d/httpd start"
             - chkconfig --levels 235 httpd on
             - cd /var/www/html
-            - echo "<html><body style=\"background-color:blue;\"><h1><p style=\"color:#FFFFFF\"> EC2 Prod Instance One</h1></body></html>" > index.html
+            - echo "<html><body style=\"background-color:orange;\"><h1><p style=\"color:#FFFFFF\"> EC2 Prod Instance One</h1></body></html>" > index.html
   ec2SG:
     Type: AWS::EC2::SecurityGroup
     Properties:
