@@ -197,23 +197,13 @@ Resources:
       - Key: Name
         Value: EC2DevInstanceTwo-Green
       UserData:
-        Fn::Base64:
-          Fn::Join:
-          - "\n"
-          - - "#!/bin/bash"
-            - "exec > >(tee /var/log/userdata.log|logger -t user-data -s 2>/dev/console) 2>&1"
-            - "echo 'Starting UserData script execution'"
-            - "yum update -y"
-            - "yum install httpd -y"
-            - "yum install tcpdump -y"
-            - "service httpd start"
-            - "/etc/init.d/httpd start"
-            - "chkconfig --levels 235 httpd on"
-            - "mkdir -p /var/www/html"
-            - "echo 'Checking if /var/www/html exists'"
-            - "if [ -d /var/www/html ]; then echo '/var/www/html directory exists'; else echo '/var/www/html directory does not exist'; exit 1; fi"
-            - "echo \"<html><body style='background-color:green;'><h1><p style='color:white;'>EC2 Dev Instance Two</h1></body></html>\" > /var/www/html/index.html"
-            - "echo 'UserData script execution completed'"
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install httpd tcpdump -y
+          service httpd start
+          chkconfig --levels 235 httpd on
+          echo "<html><body style='background-color:green;'><h1><p style='color:white;'>EC2 Dev Instance Two - Green</p></h1></body></html>" > /var/www/html/index.html
   ec2PRODONE:
     Type: AWS::EC2::Instance
     Properties:
@@ -255,23 +245,13 @@ Resources:
       - Key: Name
         Value: EC2ProdInstanceTwo-Orange
       UserData:
-        Fn::Base64:
-          Fn::Join:
-          - "\n"
-          - - "#!/bin/bash"
-            - "exec > >(tee /var/log/userdata.log|logger -t user-data -s 2>/dev/console) 2>&1"
-            - "echo 'Starting UserData script execution'"
-            - "yum update -y"
-            - "yum install httpd -y"
-            - "yum install tcpdump -y"
-            - "service httpd start"
-            - "/etc/init.d/httpd start"
-            - "chkconfig --levels 235 httpd on"
-            - "mkdir -p /var/www/html"
-            - "echo 'Checking if /var/www/html exists'"
-            - "if [ -d /var/www/html ]; then echo '/var/www/html directory exists'; else echo '/var/www/html directory does not exist'; exit 1; fi"
-            - "echo \"<html><body style='background-color:orange;'><h1><p style='color:white;'>EC2 Prod Instance Two</h1></body></html>\" > /var/www/html/index.html"
-            - "echo 'UserData script execution completed'"
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install httpd tcpdump -y
+          service httpd start
+          chkconfig --levels 235 httpd on
+          echo "<html><body style='background-color:orange;'><h1><p style='color:white;'>EC2 Prod Instance Two - Orange</p></h1></body></html>" > /var/www/html/index.html
   ec2SG:
     Type: AWS::EC2::SecurityGroup
     Properties:
