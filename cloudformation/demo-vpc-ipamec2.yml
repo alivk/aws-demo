@@ -171,7 +171,7 @@ Resources:
         Ref: ec2KEYNAME
       Tags:
       - Key: Name
-        Value: EC2 Dev Instance One
+        Value: EC2DevInstanceOne-Blue
       UserData:
         Fn::Base64:
           Fn::Join:
@@ -200,7 +200,7 @@ Resources:
         Ref: ec2KEYNAME
       Tags:
       - Key: Name
-        Value: EC2 Dev Instance Two
+        Value: EC2DevInstanceTwo-Green
       UserData:
         Fn::Base64:
           Fn::Join:
@@ -229,7 +229,7 @@ Resources:
         Ref: ec2KEYNAME
       Tags:
       - Key: Name
-        Value: EC2 Prod Instance One
+        Value: EC2ProdInstanceOne-Black
       UserData:
         Fn::Base64:
           Fn::Join:
@@ -259,7 +259,7 @@ Resources:
         Ref: ec2KEYNAME
       Tags:
       - Key: Name
-        Value: EC2 Prod Instance Two
+        Value: EC2ProdInstanceTwo-Orange
       UserData:
         Fn::Base64:
           Fn::Join:
