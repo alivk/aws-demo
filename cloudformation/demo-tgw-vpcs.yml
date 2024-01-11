@@ -841,6 +841,13 @@ Resources:
       SubnetId: !Ref PrivateSubnet4NP13
       RouteTableId: !Ref VPCNonProd13PrivateRouteTable
 
+  NP13PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicSubnetRouteTableNP13
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref VPCNonProd13InternetGateway
+
 Outputs:
   # Non-Prod 11 Outputs
   VPCNonProd11:
