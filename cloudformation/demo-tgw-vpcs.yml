@@ -803,7 +803,43 @@ Resources:
       SecurityGroupIds:
         - Ref: EndpointSecGroupNP13
 
+  #NP13 is allowed to go out to internet
+  VPCNonProd13InternetGateway:
+  Type: AWS::EC2::InternetGateway
 
+  VPCNonProd13GatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref VPCNonProd13InternetGateway
+      VpcId: !Ref VPCNonProd13
+      
+  VPCNonProd13NATGatewayElasticIP:
+    Type: AWS::EC2::EIP
+    DependsOn: VPCNonProd13GatewayAttachment
+  
+  VPCNonProd13NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt VPCNonProd13NATGatewayElasticIP.AllocationId
+      SubnetId: !Ref PublicSubnet1NP13
+    
+  VPCNonProd13PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPCNonProd13
+  
+  VPCNonProd13PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref VPCNonProd13PrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref VPCNonProd13NATGateway
+  
+  VPCNonProd13PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet4NP13
+      RouteTableId: !Ref VPCNonProd13PrivateRouteTable
 
 Outputs:
   # Non-Prod 11 Outputs
