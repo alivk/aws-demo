@@ -805,7 +805,7 @@ Resources:
 
   #NP13 is allowed to go out to internet
   VPCNonProd13InternetGateway:
-  Type: AWS::EC2::InternetGateway
+    Type: AWS::EC2::InternetGateway
 
   VPCNonProd13GatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
