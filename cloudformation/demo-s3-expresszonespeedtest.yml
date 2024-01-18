@@ -93,7 +93,7 @@ Resources:
         - !Ref AlSecurityGroup
       Tags:
         - Key: Name
-          Value: !Join [ '-', [ !Ref AlEnvironmentType, s3-mountpoint ] ]
+          Value: !Join [ '-', [ !Ref AlEnvironmentType, s3-expresszonespeedtest ] ]
       SubnetId: !Ref AlSubnetId
       SecurityGroupIds:
         - !GetAtt AlSecurityGroup.GroupId
