@@ -5,50 +5,46 @@ Description: >
   Info: This yaml template is used for S3mountpoint demostration.
 
 Parameters:
+  AlEnvironmentType:
+    Description: 'Specify the Environment type of the stack.'
+    Type: String
+    Default: Test
+    AllowedValues:
+      - Dev
+      - Test
+      - Prod
+    ConstraintDescription: 'Specify either Dev, Test or Prod.'
+
   AlAmiID:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Description: 'The ID of the AMI.'
     Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
 
+  AlVpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: 'The ID of the VPC where resources will be deployed.'
+    Default: vpc-0bcfd5f4c10fa74f6
+
+  AlSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: 'The ID of the subnet in which the instance will be launched.'
+    Default: subnet-0c7bcf36809b0ed9b
+
   AlCidrIp:
     Type: String
     Description: 'The CIDR IP range that is allowed to access the instance.'
-    Default: 0.0.0.0/0
+    Default: 132.147.100.0/24
+
+Mappings:
+  EnvironmentToInstanceType:
+    Dev:
+      InstanceType: t2.nano
+    Test:
+      InstanceType: t2.micro
+    Prod:
+      InstanceType: t2.small
 
 Resources:
-  AlVPC:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: 10.0.0.0/16
-      EnableDnsSupport: true
-      EnableDnsHostnames: true
-  AlSubnet:
-    Type: AWS::EC2::Subnet
-    Properties:
-      VpcId: !Ref AlVPC
-      CidrBlock: 10.0.1.0/24
-  AlInternetGateway:
-    Type: AWS::EC2::InternetGateway
-  AlVPCGatewayAttachment:
-    Type: AWS::EC2::VPCGatewayAttachment
-    Properties:
-      InternetGatewayId: !Ref AlInternetGateway
-      VpcId: !Ref AlVPC
-  AlRouteTable:
-    Type: AWS::EC2::RouteTable
-    Properties:
-      VpcId: !Ref AlVPC
-  AlRoute:
-    Type: AWS::EC2::Route
-    Properties:
-      DestinationCidrBlock: '0.0.0.0/0'
-      GatewayId: !Ref AlInternetGateway
-      RouteTableId: !Ref AlRouteTable
-  AlSubnetRouteTableAssociation:
-    Type: AWS::EC2::SubnetRouteTableAssociation
-    Properties:
-      SubnetId: !Ref AlSubnet
-      RouteTableId: !Ref AlRouteTable
   AlSSMIAMRolePolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -92,11 +88,13 @@ Resources:
     Properties:
       IamInstanceProfile: !Ref AlInstanceProfile
       ImageId: !Ref AlAmiID
-      InstanceType: t2.micro
+      InstanceType: !FindInMap [EnvironmentToInstanceType, !Ref AlEnvironmentType, InstanceType]
+      SecurityGroupIds:
+        - !Ref AlSecurityGroup
       Tags:
         - Key: Name
-          Value: s3-mountpoint
-      SubnetId: !Ref AlSubnet
+          Value: !Join [ '-', [ !Ref AlEnvironmentType, s3-mountpoint ] ]
+      SubnetId: !Ref AlSubnetId
       SecurityGroupIds:
         - !GetAtt AlSecurityGroup.GroupId
       UserData:
@@ -182,7 +180,7 @@ Resources:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: 'Enable HTTP access via port 80'
-      VpcId: !Ref AlVPC
+      VpcId: !Ref AlVpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: 80
