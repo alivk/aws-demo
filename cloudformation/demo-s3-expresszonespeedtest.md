@@ -1,8 +1,8 @@
-**Create Amazon ARC Zonal Shift Cloudformation Stack**
+**Create Amazon S3 Expresszone Speedtest Stack**
 
 The following Cloudformation template will create by following the steps in this section:
 
-- Cloudfront Distribution
+- EC2 Instance
 
 **Cloudformation template**
 
