@@ -20,8 +20,8 @@ aws cloudformation create-stack \
   --template-body file://"$stack_name".yml \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameters \
-      ParameterKey=AlVpcId,ParameterValue=vpc-0bcfd5f4c10fa74f6 \
-      ParameterKey=AlSubnetId,ParameterValue=subnet-0c7bcf36809b0ed9b
+      ParameterKey=AlVpcId,ParameterValue=vpc-9020aeed \
+      ParameterKey=AlSubnetId,ParameterValue=subnet-fa505db7
 
 # Step 04: Waiting for CloudFormation stack creation to complete
 
