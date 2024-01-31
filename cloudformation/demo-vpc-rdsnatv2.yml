@@ -601,8 +601,6 @@ Resources:
       Description: "IDE to use for all lab activities."
       InstanceType: "t3.micro"
       Name: Cloud9-Lab
-      OwnerArn:
-        Fn::Sub: arn:${AWS::Partition}:sts::${AWS::AccountId}:assumed-role/${LabUserRoleName}/${LabPoolId}
       AutomaticStopTimeMinutes: 90
       SubnetId: !Ref LabVPCPublicSubnet2
       ImageId: !Ref Cloud9ImageId
