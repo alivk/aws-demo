@@ -545,51 +545,6 @@ Resources:
           - Arn
       Region:
         Ref: "AWS::Region"
-  awselasticbeanstalkec2role:
-    Type: "AWS::IAM::Role"
-    Properties:
-      RoleName: aws-elasticbeanstalk-ec2-role
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - ec2.amazonaws.com
-            Action:
-              - "sts:AssumeRole"
-      ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/AWSElasticBeanstalkMulticontainerDocker"
-        - "arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier"
-        - "arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier"
-      Path: /
-  awselasticbeanstalkservicerole:
-    Type: "AWS::IAM::Role"
-    Properties:
-      RoleName: aws-elasticbeanstalk-service-role
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - elasticbeanstalk.amazonaws.com
-            Action:
-              - "sts:AssumeRole"
-            Condition:
-              StringEquals:
-                "sts:ExternalId": elasticbeanstalk
-      ManagedPolicyArns:
-        - "arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkEnhancedHealth"
-        - "arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkService"
-      Path: /
-  InstanceProfile2:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      InstanceProfileName: aws-elasticbeanstalk-ec2-role
-      Roles:
-        - !Ref awselasticbeanstalkec2role
-
   ###########
   # Creates a Cloud9 environment
   ###########
