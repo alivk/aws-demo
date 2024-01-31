@@ -18,7 +18,7 @@ echo "STEP03 - Creating the CloudFormation stack..."
 aws cloudformation create-stack \
   --stack-name "$stack_name" \
   --template-body file://"$stack_name".yml \
-  --capabilities CAPABILITY_IAM \
+  --capabilities CAPABILITY_NAMED_IAM \
   --parameters \
     ParameterKey=KeyName,ParameterValue=dev \
     ParameterKey=RoleName,ParameterValue=ROLE-SSMAdminAccess \
