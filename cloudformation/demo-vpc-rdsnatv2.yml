@@ -1,0 +1,639 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Author: Alick Li
+  Purpose: Class Demostration
+  Info: 
+  This yaml template is used to deploy cloudair monolith application 
+  using Elastic Beanstalk
+  and this is v2
+Parameters:
+  KeyName:
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    Description: Keyname for the keypair for the jumphost
+  RoleName:
+    Description: EC2 role name
+    Type: String
+    Default: ROLE-SSMAdminAccess
+    ConstraintDescription: Please specify your IAM role for EC2
+  LabVPCCIDR:
+    Description: CIDR Block for Lab VPC
+    Type: String
+    Default: 10.0.0.0/16
+    AllowedValues:
+      - 10.0.0.0/16
+  PublicSubnet1Param:
+    Description: Public Subnet 1
+    Type: String
+    Default: 10.0.10.0/24
+    AllowedValues:
+      - 10.0.10.0/24
+  PublicSubnet2Param:
+    Description: Public Subnet 2
+    Type: String
+    Default: 10.0.15.0/24
+    AllowedValues:
+      - 10.0.15.0/24
+  PrivateSubnet1Param:
+    Description: Private Subnet 1
+    Type: String
+    Default: 10.0.50.0/24
+    AllowedValues:
+      - 10.0.50.0/24
+  PrivateSubnet2Param:
+    Description: Private Subnet 2
+    Type: String
+    Default: 10.0.55.0/24
+    AllowedValues:
+      - 10.0.55.0/24
+  DBPassword:
+    Type: String
+    Default: labpassword
+    NoEcho: true
+  LatestLinux2AMI:
+    Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+  LatestWindows2019AMI:
+    Type: "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>"
+    Default: /aws/service/ami-windows-latest/Windows_Server-2019-English-Full-Base
+  Cloud9ImageId:
+    Type: String
+    Description: The AMI alias of the image to use with Cloud9.
+    Default: amazonlinux-2-x86_64
+    AllowedValues:
+      - amazonlinux-2-x86_64
+Resources:
+  LabVPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      CidrBlock:
+        Ref: LabVPCCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: VPC
+          Value: Lab VPC
+        - Key: Name
+          Value: demo-vpc-rdsnat
+  LabVPCInternetGateway:
+    Type: "AWS::EC2::InternetGateway"
+  LabVPCAttachGateway:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId:
+        Ref: LabVPC
+      InternetGatewayId:
+        Ref: LabVPCInternetGateway
+  LabVPCPublicSubnet1:
+    Type: "AWS::EC2::Subnet"
+    DependsOn: LabVPCAttachGateway
+    Properties:
+      VpcId:
+        Ref: LabVPC
+      CidrBlock:
+        Ref: PublicSubnet1Param
+      AvailabilityZone:
+        "Fn::Select":
+          - "0"
+          - "Fn::GetAZs": ""
+      Tags:
+        - Key: Name
+          Value: demo-vpc-rdsnat-public-subnet-1
+  LabVPCPublicSubnet2:
+    Type: "AWS::EC2::Subnet"
+    DependsOn: LabVPCAttachGateway
+    Properties:
+      VpcId:
+        Ref: LabVPC
+      CidrBlock:
+        Ref: PublicSubnet2Param
+      AvailabilityZone:
+        "Fn::Select":
+          - "1"
+          - "Fn::GetAZs": ""
+      Tags:
+        - Key: Name
+          Value: demo-vpc-rdsnat-public-subnet-2
+  LabVPCPrivateSubnet1:
+    Type: "AWS::EC2::Subnet"
+    DependsOn: LabVPCAttachGateway
+    Properties:
+      VpcId:
+        Ref: LabVPC
+      CidrBlock:
+        Ref: PrivateSubnet1Param
+      AvailabilityZone:
+        "Fn::Select":
+          - "0"
+          - "Fn::GetAZs": ""
+      Tags:
+        - Key: Name
+          Value: demo-vpc-rdsnat-private-subnet-1
+  LabVPCPrivateSubnet2:
+    Type: "AWS::EC2::Subnet"
+    DependsOn: LabVPCAttachGateway
+    Properties:
+      VpcId:
+        Ref: LabVPC
+      CidrBlock:
+        Ref: PrivateSubnet2Param
+      AvailabilityZone:
+        "Fn::Select":
+          - "1"
+          - "Fn::GetAZs": ""
+      Tags:
+        - Key: Name
+          Value: demo-vpc-rdsnat-private-subnet-2
+  LabVPCPublicRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    DependsOn:
+      - LabVPCPublicSubnet1
+      - LabVPCPublicSubnet2
+    Properties:
+      VpcId:
+        Ref: LabVPC
+      Tags:
+        - Key: Name
+          Value: demo-vpc-rdsnat-public-route-table
+  LabVPCPublicRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId:
+        Ref: LabVPCPublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: LabVPCInternetGateway
+  LabVPCPublicSubnet1RouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    DependsOn: LabVPCPublicRoute
+    Properties:
+      SubnetId:
+        Ref: LabVPCPublicSubnet1
+      RouteTableId:
+        Ref: LabVPCPublicRouteTable
+  LabVPCPublicSubnet2RouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    DependsOn: LabVPCPublicRoute
+    Properties:
+      SubnetId:
+        Ref: LabVPCPublicSubnet2
+      RouteTableId:
+        Ref: LabVPCPublicRouteTable
+  LabVPCPrivateRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    DependsOn:
+      - LabVPCPrivateSubnet1
+      - LabVPCPrivateSubnet2
+    Properties:
+      VpcId:
+        Ref: LabVPC
+      Tags:
+        - Key: Name
+          Value: demo-vpc-rdsnat-private-route-table
+  PrivateRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      RouteTableId: !Ref LabVPCPrivateRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      InstanceId: !Ref NATInstance
+  LabVPCPrivateSubnet1RouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    DependsOn: PrivateRoute
+    Properties:
+      SubnetId:
+        Ref: LabVPCPrivateSubnet1
+      RouteTableId:
+        Ref: LabVPCPrivateRouteTable
+  LabVPCPrivateSubnet2RouteTableAssociation:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    DependsOn: PrivateRoute
+    Properties:
+      SubnetId:
+        Ref: LabVPCPrivateSubnet2
+      RouteTableId:
+        Ref: LabVPCPrivateRouteTable
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+      - Ref: RoleName
+  NATSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Enable internal access to the NAT device
+      VpcId: !Ref LabVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 1024
+          CidrIp: !Ref PrivateSubnet1Param
+        - IpProtocol: udp
+          FromPort: 0
+          ToPort: 1024
+          CidrIp: !Ref PrivateSubnet1Param
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 1024
+          CidrIp: !Ref PrivateSubnet2Param
+        - IpProtocol: udp
+          FromPort: 0
+          ToPort: 1024
+          CidrIp: !Ref PrivateSubnet2Param
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+  NATInstance:
+    Type: "AWS::EC2::Instance"
+    DependsOn: LabVPCPublicSubnet1RouteTableAssociation
+    Properties:
+      ImageId: !Ref LatestLinux2AMI
+      InstanceType: t3.micro
+      IamInstanceProfile:
+        Ref: InstanceProfile
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          AssociatePublicIpAddress: true
+          SubnetId: !Ref LabVPCPublicSubnet1
+          GroupSet:
+            - !Ref NATSecurityGroup
+      SourceDestCheck: false
+      Tags:
+        - Key: Name
+          Value: demo-vpc-rdsnat-nat-instance
+      UserData: !Base64
+        "Fn::Join":
+          - |2+
+
+          -   - "#!/bin/bash"
+              - yum -y update
+              - yum install -y mysql
+              - echo 1 > /proc/sys/net/ipv4/ip_forward
+              - echo 0 > /proc/sys/net/ipv4/conf/eth0/send_redirects
+              - >-
+                /sbin/iptables -t nat -A POSTROUTING -o eth0 -s 0.0.0.0/0 -j
+                MASQUERADE
+              - /sbin/iptables-save > /etc/sysconfig/iptables
+              - mkdir -p /etc/sysctl.d/
+              - cat <<EOF > /etc/sysctl.d/nat.conf
+              - net.ipv4.ip_forward = 1
+              - net.ipv4.conf.eth0.send_redirects = 0
+              - |
+                EOF
+  DBSubnetGroup:
+    Type: "AWS::RDS::DBSubnetGroup"
+    DependsOn:
+      - LabVPCPrivateSubnet1RouteTableAssociation
+      - LabVPCPrivateSubnet2RouteTableAssociation
+    Properties:
+      DBSubnetGroupDescription: Lab DB Subnet Group
+      SubnetIds:
+        - !Ref LabVPCPrivateSubnet1
+        - !Ref LabVPCPrivateSubnet2
+  DBSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: DB Instance Security Group
+      VpcId: !Ref LabVPC
+      Tags:
+        - Key: Name
+          Value: DBSecurityGroup
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: !Ref LabVPCCIDR
+  LabDBInstance:
+    Type: "AWS::RDS::DBInstance"
+    Properties:
+      DBName: cloudair
+      AllocatedStorage: "5"
+      DBInstanceClass: db.t2.medium
+      Engine: MySQL
+      MasterUsername: root
+      MasterUserPassword: !Ref DBPassword
+      MultiAZ: false
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+      Tags:
+        - Key: Name
+          Value: demo-vpc-rdsnat-mysqldb-instance
+  JumphostSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Enable HTTP access
+      VpcId: !Ref LabVPC
+      Tags:
+        - Key: Name
+          Value: Jumphost SG
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+  DevInstanceWindowsWaitHandle01:
+    Type: "AWS::CloudFormation::WaitConditionHandle"
+    Properties: {}
+  DevInstanceWindowsWaitCondition01:
+    Type: "AWS::CloudFormation::WaitCondition"
+    DependsOn: DevInstanceWindows
+    Properties:
+      Handle:
+        Ref: DevInstanceWindowsWaitHandle01
+      Timeout: "3600"
+  DevInstanceWindowsSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Security Group for Windows instance
+      VpcId:
+        Ref: LabVPC
+      Tags:
+        - Key: Name
+          Value: demo-vpc-rdsnat-dev-windows-sg
+        - Key: InstanceType
+          Value: General
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3389
+          ToPort: 3389
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+  DevInstanceWindows:
+    Type: "AWS::EC2::Instance"
+    DependsOn: LabVPCPublicSubnet2RouteTableAssociation
+    Properties:
+      KeyName:
+        Ref: KeyName
+      ImageId: !Ref LatestWindows2019AMI
+      BlockDeviceMappings:
+        - DeviceName: /dev/sda1
+          Ebs:
+            VolumeSize: 60
+            VolumeType: gp2
+      InstanceType: m4.large
+      IamInstanceProfile:
+        Ref: InstanceProfile
+      NetworkInterfaces:
+        - DeviceIndex: "0"
+          AssociatePublicIpAddress: true
+          SubnetId:
+            Ref: LabVPCPublicSubnet2
+          GroupSet:
+            - Ref: DevInstanceWindowsSecurityGroup
+      Tags:
+        - Key: Name
+          Value: demo-vpc-rdsnat-dev-windows-instance
+        - Key: EC2Connect
+          Value: "true"
+      UserData:
+        "Fn::Base64":
+          "Fn::Join":
+            - ""
+            -   - |
+                  <powershell>
+                - |
+                  $ErrorActionPreference = 'Stop'
+                - |
+                  $success = 'true'
+                - |
+                  $message = 'Lab configuration succeeded.'
+                - |
+                  try {
+                - net user Administrator '
+                - "Fn::GetAtt":
+                    - GeneratePassword
+                    - password
+                - |
+                  '
+                - |
+                  New-Item -ItemType directory -Path 'C:\temp', 'C:\temp\aws'
+                - |
+                  $webclient = New-Object System.Net.WebClient
+                - >
+                  $webclient.DownloadFile('https://s3.amazonaws.com/aws-cli/AWSCLI64.msi','C:\temp\aws\AWSCLI64.msi')
+                - |
+                  Start-Process 'C:\temp\aws\AWSCLI64.msi' -ArgumentList /qn -Wait
+                - |
+                  $env:Path = $env:Path + ";C:\Program Files\Amazon\AWSCLI\"
+                - |
+                  New-Item -ItemType directory -Path 'C:\Users\Administrator\.aws'
+                - "$ConfigSet = @\"\r\n"
+                - "[default]\r\n"
+                - "region = "
+                - Ref: "AWS::Region"
+                - "\r\n"
+                - "\r\n"
+                - "\"@\r\n"
+                - >
+                  New-Item -ItemType file -Path
+                  'C:\Users\Administrator\.aws\config' -Value $ConfigSet
+                - "$Credentials = @\"\r\n"
+                - "[default]\r\n"
+                - aws_access_key_id=
+                - {"Ref": "AWSAccessKey"}
+                - "\r\n"
+                - "aws_secret_access_key="
+                - Fn::GetAtt: [AWSAccessKey, SecretAccessKey]
+                - "\r\n"
+                - "\r\n"
+                - "\"@\r\n"
+                - >
+                  New-Item -ItemType file -Path
+                  'C:\Users\Administrator\.aws\credentials' -Value $Credentials
+                - |2+
+                  } catch {
+                - |
+                  $success='false'
+                - |
+                  $message=$_.Exception
+                - >
+                  add-content c:\temp\aws\install-log.txt 'Exception was thrown -
+                  details below:'
+                - |
+                  $_.Exception | format-list -force >> c:\temp\aws\install-log.txt
+                - |
+                  } finally {
+                - cfn-signal.exe -s $success '
+                - Ref: DevInstanceWindowsWaitHandle01
+                - |
+                  ' -r "$message"
+                - |
+                  restart-computer -force
+                - |
+                  }
+                - </powershell>
+  GeneratePasswordLambdaExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: /
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "arn:aws:logs:*:*:*"
+              - Effect: Allow
+                Action:
+                  - "secretsmanager:GetRandomPassword"
+                Resource: "*"
+  GeneratePasswordFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Code:
+        ZipFile: !Sub |
+          var response = require('./cfn-response');
+          var {
+              SecretsManager
+          } = require("@aws-sdk/client-secrets-manager");
+          exports.handler = function(event, context) {
+              var responseData = {};
+              var params = {
+                  PasswordLength: 12,
+                  ExcludePunctuation: true,
+                  RequireEachIncludedType: true
+              };
+              var secretsmanager = new SecretsManager({
+                  region: '${AWS::Region}'
+              });
+              secretsmanager.getRandomPassword(params, function(err, data) {
+                  if (err) {
+                      responseData = {
+                          Error: 'SecretsManager getRandomPassword failed'
+                      };
+                      console.log(responseData.Error + ":", err.stack);
+                      response.send(event, context, response.ERROR, responseData);
+                  } else {
+                      responseData['password'] = data.RandomPassword;
+                      console.log(responseData['password']);
+                      response.send(event, context, response.SUCCESS, responseData);
+                  }
+              });
+          };
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Timeout: 30
+      Role:
+        "Fn::GetAtt":
+          - GeneratePasswordLambdaExecutionRole
+          - Arn
+  GeneratePassword:
+    Type: "Custom::GeneratePassword"
+    Properties:
+      ServiceToken:
+        "Fn::GetAtt":
+          - GeneratePasswordFunction
+          - Arn
+      Region:
+        Ref: "AWS::Region"
+  awselasticbeanstalkec2role:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: aws-elasticbeanstalk-ec2-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AWSElasticBeanstalkMulticontainerDocker"
+        - "arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier"
+        - "arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier"
+      Path: /
+  awselasticbeanstalkservicerole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: aws-elasticbeanstalk-service-role
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - elasticbeanstalk.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+            Condition:
+              StringEquals:
+                "sts:ExternalId": elasticbeanstalk
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkEnhancedHealth"
+        - "arn:aws:iam::aws:policy/service-role/AWSElasticBeanstalkService"
+      Path: /
+  InstanceProfile2:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      InstanceProfileName: aws-elasticbeanstalk-ec2-role
+      Roles:
+        - !Ref awselasticbeanstalkec2role
+
+  ###########
+  # Creates a Cloud9 environment
+  ###########
+
+  Cloud9Environment:
+    Type: AWS::Cloud9::EnvironmentEC2
+    DependsOn: LabVPCPublicSubnet2RouteTableAssociation
+    Properties:
+      Description: "IDE to use for all lab activities."
+      InstanceType: "t3.micro"
+      Name: Cloud9-Lab
+      OwnerArn:
+        Fn::Sub: arn:${AWS::Partition}:sts::${AWS::AccountId}:assumed-role/${LabUserRoleName}/${LabPoolId}
+      AutomaticStopTimeMinutes: 90
+      SubnetId: !Ref LabVPCPublicSubnet2
+      ImageId: !Ref Cloud9ImageId
+Outputs:
+  AWSAccessKey:
+    Value: !Ref AWSAccessKey
+  AWSSecretAccessKey:
+    Value: !GetAtt AWSAccessKey.SecretAccessKey
+  WindowsInstanceIP:
+    Value: !Sub |
+      ${DevInstanceWindows.PublicIp}
+  WindowsPassword:
+    Value:
+      "Fn::GetAtt":
+        - GeneratePassword
+        - password
+  RDSInstanceAddress:
+    Value: !GetAtt LabDBInstance.Endpoint.Address
+    Description: The DNS name for your RDS instance
+  Region:
+    Value: !Ref AWS::Region
