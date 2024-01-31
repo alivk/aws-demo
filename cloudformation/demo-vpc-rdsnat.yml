@@ -79,7 +79,7 @@ Resources:
       EnableDnsHostnames: true
       Tags:
         - Key: Name
-          Value: Lab VPC
+          Value: demo-vpc-rdsnat
   InternetGateway:
     Type: 'AWS::EC2::InternetGateway'
     DependsOn: VPC
@@ -99,7 +99,7 @@ Resources:
         - !GetAZs ''
       Tags:
         - Key: Name
-          Value: Public Subnet 1
+          Value: demo-vpc-rdsnat-public-subnet-1
   PublicSubnet2:
     Type: 'AWS::EC2::Subnet'
     DependsOn: AttachGateway
@@ -111,7 +111,7 @@ Resources:
         - !GetAZs ''
       Tags:
         - Key: Name
-          Value: Public Subnet 2
+          Value: demo-vpc-rdsnat-public-subnet-2
   PrivateSubnet1:
     Type: 'AWS::EC2::Subnet'
     DependsOn: AttachGateway
@@ -123,7 +123,7 @@ Resources:
         - !GetAZs ''
       Tags:
         - Key: Name
-          Value: Private Subnet 1
+          Value: demo-vpc-rdsnat-private-subnet-1
   PrivateSubnet2:
     Type: 'AWS::EC2::Subnet'
     DependsOn: AttachGateway
@@ -135,7 +135,7 @@ Resources:
         - !GetAZs ''
       Tags:
         - Key: Name
-          Value: Private Subnet 2
+          Value: demo-vpc-rdsnat-private-subnet-2
   PublicRouteTable:
     Type: 'AWS::EC2::RouteTable'
     DependsOn:
@@ -144,7 +144,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: Public
+          Value: demo-vpc-rdsnat-public-route-table
   PublicRoute:
     Type: 'AWS::EC2::Route'
     DependsOn:
@@ -172,7 +172,7 @@ Resources:
       VpcId: !Ref VPC
       Tags:
         - Key: Name
-          Value: Private
+          Value: demo-vpc-rdsnat-private-route-table
   PrivateSubnet1RouteTableAssociation:
     Type: 'AWS::EC2::SubnetRouteTableAssociation'
     DependsOn:
@@ -218,7 +218,7 @@ Resources:
       SourceDestCheck: false
       Tags:
         - Key: Name
-          Value: NAT
+          Value: demo-vpc-rdsnat-nat-instance
       UserData: !Base64 
         'Fn::Join':
           - |+
@@ -298,7 +298,7 @@ Resources:
         - !Ref DBSecurityGroup
       Tags:
         - Key: Name
-          Value: MySQL Lab DB Instance
+          Value: demo-vpc-rdsnat-mysqldb-instance
   DBSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -357,7 +357,7 @@ Resources:
       SourceDestCheck: true
       Tags:
         - Key: Name
-          Value: Jumphost
+          Value: demo-vpc-rdsnat-jump-instance
       UserData: !Base64 
         'Fn::Join':
           - ''
