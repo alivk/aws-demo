@@ -20,7 +20,7 @@ aws cloudformation create-stack \
   --template-body file://"$stack_name".yml \
   --capabilities CAPABILITY_IAM \
   --parameters \
-    ParameterKey=KeyName,ParameterValue=development \
+    ParameterKey=KeyName,ParameterValue=dev \
     ParameterKey=RoleName,ParameterValue=ROLE-SSMAdminAccess \
     ParameterKey=VPCCIDR,ParameterValue=10.20.0.0/16 \
     ParameterKey=PublicSubnet1Param,ParameterValue=10.20.10.0/24 \
