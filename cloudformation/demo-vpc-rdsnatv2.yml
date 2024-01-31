@@ -446,19 +446,6 @@ Resources:
                 - >
                   New-Item -ItemType file -Path
                   'C:\Users\Administrator\.aws\config' -Value $ConfigSet
-                - "$Credentials = @\"\r\n"
-                - "[default]\r\n"
-                - aws_access_key_id=
-                - {"Ref": "AWSAccessKey"}
-                - "\r\n"
-                - "aws_secret_access_key="
-                - Fn::GetAtt: [AWSAccessKey, SecretAccessKey]
-                - "\r\n"
-                - "\r\n"
-                - "\"@\r\n"
-                - >
-                  New-Item -ItemType file -Path
-                  'C:\Users\Administrator\.aws\credentials' -Value $Credentials
                 - |2+
                   } catch {
                 - |
@@ -620,10 +607,6 @@ Resources:
       SubnetId: !Ref LabVPCPublicSubnet2
       ImageId: !Ref Cloud9ImageId
 Outputs:
-  AWSAccessKey:
-    Value: !Ref AWSAccessKey
-  AWSSecretAccessKey:
-    Value: !GetAtt AWSAccessKey.SecretAccessKey
   WindowsInstanceIP:
     Value: !Sub |
       ${DevInstanceWindows.PublicIp}
