@@ -27,7 +27,7 @@ aws cloudformation create-stack \
     ParameterKey=PublicSubnet2Param,ParameterValue=10.0.15.0/24 \
     ParameterKey=PrivateSubnet1Param,ParameterValue=10.0.50.0/24 \
     ParameterKey=PrivateSubnet2Param,ParameterValue=10.0.55.0/24 \
-    ParameterKey=DBPassword,ParameterValue=labpassword \
+    ParameterKey=DBPassword,ParameterValue=labpassword
 
 # Step 04: Waiting for CloudFormation stack creation to complete
 
