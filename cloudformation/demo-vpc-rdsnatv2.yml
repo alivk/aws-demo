@@ -74,7 +74,7 @@ Resources:
         - Key: VPC
           Value: Lab VPC
         - Key: Name
-          Value: demo-vpc-rdsnat
+          Value: demo-vpc-rdsnatv2
   LabVPCInternetGateway:
     Type: "AWS::EC2::InternetGateway"
   LabVPCAttachGateway:
@@ -98,7 +98,7 @@ Resources:
           - "Fn::GetAZs": ""
       Tags:
         - Key: Name
-          Value: demo-vpc-rdsnat-public-subnet-1
+          Value: demo-vpc-rdsnatv2-public-subnet-1
   LabVPCPublicSubnet2:
     Type: "AWS::EC2::Subnet"
     DependsOn: LabVPCAttachGateway
@@ -113,7 +113,7 @@ Resources:
           - "Fn::GetAZs": ""
       Tags:
         - Key: Name
-          Value: demo-vpc-rdsnat-public-subnet-2
+          Value: demo-vpc-rdsnatv2-public-subnet-2
   LabVPCPrivateSubnet1:
     Type: "AWS::EC2::Subnet"
     DependsOn: LabVPCAttachGateway
@@ -128,7 +128,7 @@ Resources:
           - "Fn::GetAZs": ""
       Tags:
         - Key: Name
-          Value: demo-vpc-rdsnat-private-subnet-1
+          Value: demo-vpc-rdsnatv2-private-subnet-1
   LabVPCPrivateSubnet2:
     Type: "AWS::EC2::Subnet"
     DependsOn: LabVPCAttachGateway
@@ -143,7 +143,7 @@ Resources:
           - "Fn::GetAZs": ""
       Tags:
         - Key: Name
-          Value: demo-vpc-rdsnat-private-subnet-2
+          Value: demo-vpc-rdsnatv2-private-subnet-2
   LabVPCPublicRouteTable:
     Type: "AWS::EC2::RouteTable"
     DependsOn:
@@ -154,7 +154,7 @@ Resources:
         Ref: LabVPC
       Tags:
         - Key: Name
-          Value: demo-vpc-rdsnat-public-route-table
+          Value: demo-vpc-rdsnatv2-public-route-table
   LabVPCPublicRoute:
     Type: "AWS::EC2::Route"
     Properties:
@@ -189,7 +189,7 @@ Resources:
         Ref: LabVPC
       Tags:
         - Key: Name
-          Value: demo-vpc-rdsnat-private-route-table
+          Value: demo-vpc-rdsnatv2-private-route-table
   PrivateRoute:
     Type: "AWS::EC2::Route"
     Properties:
@@ -266,7 +266,7 @@ Resources:
       SourceDestCheck: false
       Tags:
         - Key: Name
-          Value: demo-vpc-rdsnat-nat-instance
+          Value: demo-vpc-rdsnatv2-nat-instance
       UserData: !Base64
         "Fn::Join":
           - |2+
@@ -324,7 +324,7 @@ Resources:
         - !Ref DBSecurityGroup
       Tags:
         - Key: Name
-          Value: demo-vpc-rdsnat-mysqldb-instance
+          Value: demo-vpc-rdsnatv2-mysqldb-instance
   JumphostSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
@@ -356,7 +356,7 @@ Resources:
         Ref: LabVPC
       Tags:
         - Key: Name
-          Value: demo-vpc-rdsnat-dev-windows-sg
+          Value: demo-vpc-rdsnatv2-dev-windows-sg
         - Key: InstanceType
           Value: General
       SecurityGroupEgress:
@@ -401,7 +401,7 @@ Resources:
             - Ref: DevInstanceWindowsSecurityGroup
       Tags:
         - Key: Name
-          Value: demo-vpc-rdsnat-dev-windows-instance
+          Value: demo-vpc-rdsnatv2-dev-windows-instance
         - Key: EC2Connect
           Value: "true"
       UserData:
@@ -555,7 +555,7 @@ Resources:
     Properties:
       Description: "IDE to use for all lab activities."
       InstanceType: "t3.micro"
-      Name: demo-vpc-rdsnat-c9
+      Name: demo-vpc-rdsnatv2-c9
       AutomaticStopTimeMinutes: 90
       SubnetId: !Ref LabVPCPublicSubnet2
       ImageId: !Ref Cloud9ImageId
