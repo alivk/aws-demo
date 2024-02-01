@@ -667,8 +667,6 @@ Resources:
 
 
 Outputs:
-  PopulatedBucket:
-    Value: !Ref PopulatedBucket
   PermissionsBoundaryARN:
     Value: !Ref BoundaryIAMPolicy
     Description: Permissions Boundary Policy ARN
