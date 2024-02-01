@@ -1,7 +1,10 @@
 ---
 AWSTemplateFormatVersion: '2010-09-09'
-Description: AWS CloudFormation template for dynamic Cloud 9 setups. Creates a Cloud9
-  bootstraps the instance.
+Description: >
+  Author: Alick Li
+  Purpose: Class Demostration
+  Info: 
+  This yaml template is used CDK to leverage Amazon Rekognition and Step Functions
 Parameters:
 
   AlAmiID:
