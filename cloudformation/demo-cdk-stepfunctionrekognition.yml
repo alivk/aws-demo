@@ -1,0 +1,688 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Advanced Developing on AWS - Lab 3 Template
+
+Parameters:
+  FileAssetsBucketKmsKeyId:
+    Description: Empty to create a new key (default), 'AWS_MANAGED_KEY' to use a managed S3 key, or the ID/ARN of an existing key.
+    Default: ""
+    Type: String
+  Qualifier:
+    Description: An identifier to distinguish multiple bootstrap stacks in the same environment
+    Default: cdk8487
+    Type: String
+    AllowedPattern: "[A-Za-z0-9_-]{1,10}"
+    ConstraintDescription: Qualifier must be an alphanumeric identifier of at most 10 characters
+Resources:
+  ###########
+  # Creates the MyappCdkStack-rekognitionRole role.
+  # Has the rekognitionRoleDefaultPolicy managed policy attached to it.
+  # Creates the rekognitionRoleDefaultPolicy managed policy.
+  ###########
+  RekognitionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: rekognitionRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: /
+      ManagedPolicyArns:
+        - !Ref RekognitionPolicy
+  RekognitionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Managed policy for the rekognitionRole.
+      ManagedPolicyName: rekognitionRoleDefaultPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: rekognitionPermissions
+            Effect: Allow
+            Action:
+              - "rekognition:Get*"
+              - "rekognition:List*"
+              - "rekognition:Describe*"
+              - "rekognition:Detect*"
+            Resource: "*"
+          - Sid: snsPermissions
+            Effect: Allow
+            Action:
+              - "sns:Get*"
+              - "sns:List*"
+              - "sns:Publish"
+              - "sns:Subscribe"
+            Resource: "*"
+          - Sid: s3Permissions
+            Effect: Allow
+            Action:
+              - "s3:CreateBucket"
+              - "s3:Get*"
+              - "s3:List*"
+              - "s3:ListBucket"
+            Resource: "*"
+  ###########
+  # Creates the MyappCdkStack-s3FunctionServiceRole role.
+  # Has the AWSLambdaBasicExecutionRole attached to it.
+  # Has the s3FunctionServiceRoleDefaultPolicy managed policy attached to it.
+  # Creates the s3FunctionServiceRoleDefaultPolicy managed policy.
+  ###########
+  s3FunctionServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: s3FunctionServiceRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Ref s3FunctionPolicy
+  s3FunctionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Managed policy for the s3FunctionServiceRole.
+      ManagedPolicyName: s3FunctionServiceRoleDefaultPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: statesPermissions
+            Effect: Allow
+            Action:
+              - "states:StartExecution"
+              - "states:CreateStateMachine"
+              - "states:TagResource"
+              - "states:GetExecutionHistory"
+              - "states:GetActivityTask"
+              - "states:DeleteStateMachine"
+              - "states:UpdateStateMachine"
+            Resource: "*"
+  ###########
+  # Creates the MyappCdkStack-StateMachineRole role.
+  # Has the StateMachineRoleDefaultPolicy policy managed policy attached to it.
+  # Creates the StateMachineRoleDefaultPolicy managed policy.
+  ###########
+  StateMachineRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: StateMachineRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - states.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: /
+      ManagedPolicyArns:
+        - !Ref StateMachinePolicy
+  StateMachinePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Managed policy for the StateMachineRole.
+      ManagedPolicyName: stateMachineRolePolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: RekognitionLambdaPermissions
+            Effect: Allow
+            Action:
+              - "lambda:InvokeFunction"
+            Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:MyappCdkStack-rekognitionFunction*"
+            #Resource: '*'
+          - Sid: HumanLambdaPermissions
+            Effect: Allow
+            Action:
+              - "lambda:InvokeFunction"
+            Resource: !Sub "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:MyappCdkStack-humanFunction*"
+            #Resource: '*'
+          - Sid: StateMachinePermissions
+            Effect: Allow
+            Action:
+              - "states:CreateStateMachine"
+              - "states:TagResource"
+              - "states:GetExecutionHistory"
+              - "states:GetActivityTask"
+              - "states:DeleteStateMachine"
+              - "states:UpdateStateMachine"
+            Resource: "*"
+  ###########
+  # Creates the MyappCdkStack-s3ImageServiceRole.
+  # Has the AWSLambdaBasicExecutionRole attached to it.
+  ###########
+  s3ImageServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: s3ImageServiceRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Ref RekognitionPolicy
+  ###########
+  # Creates the MyappCdkStack-BucketNotificationsHandler role.
+  # Has the AWSLambdaBasicExecutionRole attached to it.
+  # Has the BucketNotificationsHandler managed policy attached to it.
+  # Creates the BucketNotificationsHandler managed policy.
+  ###########
+  BucketNotificationHandler:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: BucketNotificationsHandler
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: "sts:AssumeRole"
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - !Ref BucketNotificationPolicy
+  BucketNotificationPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Managed policy for the BucketNotificationHandler role.
+      ManagedPolicyName: BucketNotificationHandlerPolicy
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: rekognitionPermissions
+            Effect: Allow
+            Action:
+              - "s3:PutBucketNotification"
+              - "sns:Publish"
+              - "iam:GetRole"
+            Resource: "*"
+  ###########
+  # Creates a permissions boundary policy that limits the permissions used in the
+  # inline policy for the role created by the awsstudent user.
+  # This is a free-standing policy.
+  # Do not attach the permissions boundary directly to the awsstudent account.
+  # This code is good.
+  ###########
+  BoundaryIAMPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: boundaryMyappRoleRestrictions
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: cloudwatchPermissions
+            Effect: Allow
+            Resource: "*"
+            Action:
+              - "logs:CreateLogStream"
+              - "logs:CreateLogGroup"
+              - "logs:PutLogEvents"
+              - "logs:DescribeLogStream"
+              - "logs:CreateLogGroup"
+              - "logs:DescribeLogStreams"
+              - "logs:GetLogEvents"
+          - Sid: s3Permissions
+            Effect: Allow
+            Resource: "*"
+            Action:
+              - "s3:PutBucketNotification"
+  ###########
+  # SNSTopic
+  ###########
+  SNSTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: 'send-email'
+      TopicName: 'send-email'
+
+  ###########
+  # Creates the FilePublishingRole for bootstrapping CDK
+  ###########
+  FilePublishingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              AWS:
+                Ref: AWS::AccountId
+      RoleName: CDK-LabStack-File-Publishing-Role
+      Tags:
+        - Key: aws-cdk:bootstrap-role
+          Value: file-publishing
+
+  ###########
+  # Creates the ImagePublishingRole for bootstrapping CDK
+  ###########
+  ImagePublishingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              AWS:
+                Ref: AWS::AccountId
+      RoleName: CDK-LabStack-Image-Publishing-Role
+      Tags:
+        - Key: aws-cdk:bootstrap-role
+          Value: image-publishing
+
+  ###########
+  # Creates the LookupRole for bootstrapping CDK
+  ###########
+  LookupRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              AWS:
+                Ref: AWS::AccountId
+      RoleName: CDK-LabStack-Lookup-Role
+      ManagedPolicyArns:
+        - Fn::Sub: arn:${AWS::Partition}:iam::aws:policy/ReadOnlyAccess
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Sid: DontReadSecrets
+                Effect: Deny
+                Action:
+                  - kms:Decrypt
+                Resource: "*"
+            Version: "2012-10-17"
+          PolicyName: LookupRolePolicy
+      Tags:
+        - Key: aws-cdk:bootstrap-role
+          Value: lookup
+
+  ###########
+  # Creates the FilePublishingRoleDefaultPolicy for bootstrapping CDK
+  ###########
+  FilePublishingRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - s3:GetObject*
+              - s3:CreateBucket
+              - s3:GetBucket*
+              - s3:GetEncryptionConfiguration
+              - s3:List*
+              - s3:ListBucket
+              - s3:DeleteObject*
+              - s3:PutObject*
+              - s3:Abort*
+            Resource:
+              - Fn::Sub: ${StagingBucket.Arn}
+              - Fn::Sub: ${StagingBucket.Arn}/*
+            Effect: Allow
+          - Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:Encrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+            Effect: Allow
+            Resource:
+              - Fn::Sub: arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:key/${FileAssetsBucketKmsKeyId}
+        Version: "2012-10-17"
+      Roles:
+        - Ref: FilePublishingRole
+      PolicyName: CDK-LabStack-File-Publishing-Role-Default-Policy
+
+  ###########
+  # Creates the ImagePublishingRoleDefaultPolicy for bootstrapping CDK
+  ###########
+  ImagePublishingRoleDefaultPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - ecr:PutImage
+              - ecr:InitiateLayerUpload
+              - ecr:UploadLayerPart
+              - ecr:CompleteLayerUpload
+              - ecr:BatchCheckLayerAvailability
+              - ecr:DescribeRepositories
+              - ecr:DescribeImages
+              - ecr:BatchGetImage
+              - ecr:GetDownloadUrlForLayer
+            Resource:
+              Fn::Sub: ${ContainerAssetsRepository.Arn}
+            Effect: Allow
+          - Action:
+              - ecr:GetAuthorizationToken
+            Resource: "*"
+            Effect: Allow
+        Version: "2012-10-17"
+      Roles:
+        - Ref: ImagePublishingRole
+      PolicyName: CDK-LabStack-Image-Publishing-Role-Default-Policy
+
+  ###########
+  # Creates the DeploymentActionRole for bootstrapping CDK
+  ###########
+  DeploymentActionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              AWS:
+                Ref: AWS::AccountId
+      Policies:
+        - PolicyDocument:
+            Statement:
+              - Sid: CloudFormationPermissions
+                Effect: Allow
+                Action:
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:DescribeStacks
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:CreateStack
+                  - cloudformation:UpdateStack
+                  - cloudformation:DeleteStack
+                Resource: "*"
+              - Sid: PipelineCrossAccountArtifactsBucket
+                Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:GetObject*
+                  - s3:GetBucket*
+                  - s3:List*
+                  - s3:ListBucket
+                  - s3:Abort*
+                  - s3:DeleteObject*
+                  - s3:PutObject*
+                Resource: "*"
+                Condition:
+                  StringNotEquals:
+                    s3:ResourceAccount:
+                      Ref: AWS::AccountId
+              - Sid: PipelineCrossAccountArtifactsKey
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:DescribeKey
+                  - kms:Encrypt
+                  - kms:ReEncrypt*
+                  - kms:GenerateDataKey*
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    kms:ViaService:
+                      Fn::Sub: s3.${AWS::Region}.amazonaws.com
+              - Action: iam:PassRole
+                Resource:
+                  Fn::Sub: ${CloudFormationExecutionRole.Arn}
+                Effect: Allow
+              - Sid: CliPermissions
+                Action:
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:GetTemplate
+                  - cloudformation:DeleteStack
+                  - cloudformation:UpdateTerminationProtection
+                  - sts:GetCallerIdentity
+                Resource: "*"
+                Effect: Allow
+              - Sid: CliStagingBucket
+                Effect: Allow
+                Action:
+                  - s3:CreateBucket
+                  - s3:GetObject*
+                  - s3:GetBucket*
+                  - s3:List*
+                  - s3:ListBucket
+                Resource:
+                  - Fn::Sub: ${StagingBucket.Arn}
+                  - Fn::Sub: ${StagingBucket.Arn}/*
+              - Sid: ReadVersion
+                Effect: Allow
+                Action:
+                  - ssm:GetParameter
+                Resource:
+                  - Fn::Sub: arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter*
+            Version: "2012-10-17"
+          PolicyName: default
+      RoleName: CDK-LabStack-Deploy-Role
+      Tags:
+        - Key: aws-cdk:bootstrap-role
+          Value: deploy
+
+  ###########
+  # Creates the DeploymentActionRole for bootstrapping CDK
+  ###########
+  CloudFormationExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - 'sts:AssumeRole'
+            Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Ref: CloudFormationExecutionPolicy
+      RoleName: CDK-LabStack-CFN-Execution-Role
+
+  ###########
+  # Creates the CFN Execution Policy for bootstrapping CDK
+  ###########
+  CloudFormationExecutionPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: "Used by CDK to create resources using CFN."
+      ManagedPolicyName: CDK-LabStack-CFN-Execution-Policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: PassRolePermissions
+            Effect: Allow
+            Action: 'iam:PassRole'
+            Resource:
+              - 'arn:aws:iam::*:role/CDKPrimerHelloHandlerLambdaRole'
+              - 'arn:aws:iam::*:role/HelloHitCounterServiceRole'
+          - Sid: CDKPermissions
+            Effect: Allow
+            Action:
+              - 'apigateway:POST'
+              - 'apigateway:PATCH'
+              - 'apigateway:PUT'
+              - 'apigateway:GET'
+              - 'apigateway:DELETE'
+              - 'dynamodb:CreateTable'
+              - 'dynamodb:DeleteTable'
+              - 'dynamodb:Describe*'
+              - 'dynamodb:Get*'
+              - 'dynamodb:List*'
+              - 'ecr:GetAuthorizationToken'
+              - 'lambda:AddPermission'
+              - 'lambda:RemovePermission'
+              - 'lambda:CreateFunction'
+              - 'lambda:UpdateFunctionCode'
+              - 'lambda:InvokeFunction'
+              - 'lambda:Get*'
+              - 'lambda:List*'
+              - 'lambda:DeleteFunction'
+              - 'ssm:GetParameters'
+              - 'sns:Subscribe'
+              - s3:CreateBucket
+              - 's3:Get*'
+              - 's3:List*'
+              - 's3:ListBucket'
+              - 'iam:CreateRole'
+              - 'iam:GetRole'
+              - 'iam:AttachRolePolicy'
+              - 'iam:DetachRolePolicy'
+              - 'iam:PutRolePolicy'
+              - 'iam:DeleteRolePolicy'
+              - 'iam:DeleteRole'
+              - 'iam:PassRole'
+              - 'states:CreateStateMachine'
+              - 'states:TagResource'
+              - 'states:DescribeStateMachine'
+              - 'states:UpdateStateMachine'
+              - 'states:DeleteStateMachine'
+            Resource: '*'
+
+  ###########
+  # Creates the Container Assets Repository for bootstrapping CDK
+  ###########
+  ContainerAssetsRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      RepositoryName: cdk-staging-assets-repository
+
+  ###########
+  # Creates the Files Assets Bucket Encryption Key for bootstrapping CDK
+  ###########
+  FileAssetsBucketEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      KeyPolicy:
+        Statement:
+          - Action:
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+              - kms:GenerateDataKey
+            Effect: Allow
+            Principal:
+              AWS:
+                Ref: AWS::AccountId
+            Resource: "*"
+          - Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:Encrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+            Effect: Allow
+            Principal:
+              AWS: "*"
+            Resource: "*"
+            Condition:
+              StringEquals:
+                kms:CallerAccount:
+                  Ref: AWS::AccountId
+                kms:ViaService:
+                  - Fn::Sub: s3.${AWS::Region}.amazonaws.com
+          - Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+              - kms:Encrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: ${FilePublishingRole.Arn}
+            Resource: "*"
+
+  ###########
+  # Creates the StagingBucket for bootstrapping CDK
+  ###########
+  StagingBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub 'cdk-staging-bucket-${AWS::AccountId}-${AWS::Region}'
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: aws:kms
+              KMSMasterKeyID: !Sub ${FileAssetsBucketEncryptionKey.Arn}
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerPreferred
+      VersioningConfiguration:
+        Status: Enabled
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+
+  ###########
+  # Creates the StagingBucketPolicy for bootstrapping CDK
+  ###########
+  StagingBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: StagingBucket
+      PolicyDocument:
+        Id: AccessControl
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowSSLRequestsOnly
+            Action: s3:*
+            Effect: Deny
+            Resource:
+              - Fn::Sub: ${StagingBucket.Arn}
+              - Fn::Sub: ${StagingBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: "false"
+            Principal: "*"
+
+
+Outputs:
+  PopulatedBucket:
+    Value: !Ref PopulatedBucket
+  PermissionsBoundaryARN:
+    Value: !Ref BoundaryIAMPolicy
+    Description: Permissions Boundary Policy ARN
+  SendEmailARN:
+    Value: !Ref SNSTopic
+  AccountID:
+    Value: !Ref AWS::AccountId
+  Region:
+    Value: !Ref AWS::Region
+  BucketName:
+    Description: The name of the S3 bucket owned by the CDK toolkit stack
+    Value:
+      Fn::Sub: ${StagingBucket}
+  BucketDomainName:
+    Description: The domain name of the S3 bucket owned by the CDK toolkit stack
+    Value:
+      Fn::Sub: ${StagingBucket.RegionalDomainName}
