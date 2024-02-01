@@ -372,11 +372,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 3389
           ToPort: 3389
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 3306
-          ToPort: 3306
-          CidrIp: 0.0.0.0/0
+          CidrIp: 132.147.100.0/24
   DevInstanceWindows:
     Type: "AWS::EC2::Instance"
     DependsOn: LabVPCPublicSubnet2RouteTableAssociation
