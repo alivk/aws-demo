@@ -5,19 +5,6 @@ Description: >
   Purpose: Class Demostration
   Info: 
   This yaml template is used to support messaging demo
-Parameters:
-  AppName:
-    Type: String
-    Default: "demo-messaging-sqssnskinesisiot"
-    Description: "Amplify application name"
-  AppRolePolicyName:
-    Type: String
-    Default: "AppRoleDefaultPolicy"
-    Description: "Amplify role policy name"
-  AppBranchName:
-    Type: String
-    Default: "main"
-    Description: "Amplify application Git branch name to deploy"
 Resources:
   LambdaKinesisToSQSRole:
     Type: "AWS::IAM::Role"
