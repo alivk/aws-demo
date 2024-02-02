@@ -5,6 +5,19 @@ Description: >
   Purpose: Class Demostration
   Info: 
   This yaml template is used to support messaging demo
+Parameters:
+  AppName:
+    Type: String
+    Default: "demo-messaging-sqssnskinesisiot"
+    Description: "Amplify application name"
+  AppRolePolicyName:
+    Type: String
+    Default: "AppRoleDefaultPolicy"
+    Description: "Amplify role policy name"
+  AppBranchName:
+    Type: String
+    Default: "main"
+    Description: "Amplify application Git branch name to deploy"
 Resources:
   LambdaKinesisToSQSRole:
     Type: "AWS::IAM::Role"
@@ -282,7 +295,55 @@ Resources:
       Queues:
         - !Ref microservicesDrawQueueFIFO
 
+  CodeCommitRepository:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: !Ref AppName
+      RepositoryDescription: "Repository for demo messaging application."
+
+  FrontAppAmplifyRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service: "amplify.amazonaws.com"
+            Action: "sts:AssumeRole"
+
+  FrontAppAmplifyRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: !Ref AppRolePolicyName
+      Roles:
+        - !Ref FrontAppAmplifyRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Action: "codecommit:GitPull"
+            Resource: !GetAtt CodeCommitRepository.Arn
+
+  FrontAppAmplifyApp:
+    Type: AWS::Amplify::App
+    Properties:
+      Name: !Ref AppName
+      IAMServiceRoleArn: !GetAtt FrontAppAmplifyRole.Arn
+      Repository: !GetAtt CodeCommitRepository.CloneUrlHttp
+
+  FrontAppAmplifyBranch:
+    Type: AWS::Amplify::Branch
+    Properties:
+      AppId: !GetAtt FrontAppAmplifyApp.AppId
+      BranchName: !Ref AppBranchName
+      EnableAutoBuild: true
+      EnablePullRequestPreview: true
+
 Outputs:
+  CognitoIdentityPoolId:
+    Description: Cognito.IdentityPoolId
+    Value: !Ref CIPMessageDraw
   QueueUrl1:
     Description: SQS.Standard.QueueUrl
     Value: !Ref microservicesDrawQueueStandard1
@@ -298,6 +359,9 @@ Outputs:
   TopicARN:
     Description: SNS.TopicARN
     Value: !Ref microservicesDrawTopic
-  CognitoIdentityPoolId:
-    Description: Cognito.IdentityPoolId
-    Value: !Ref CIPMessageDraw
+  GitCloneUrl:
+    Description: "Git clone URL for the repository"
+    Value: !GetAtt CodeCommitRepository.CloneUrlSsh
+  AmplifyAppURL:
+    Description: "URL of the hosted Amplify website"
+    Value: !GetAtt FrontAppAmplifyApp.DefaultDomain
