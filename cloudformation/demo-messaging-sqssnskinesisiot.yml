@@ -324,9 +324,9 @@ Resources:
   AmplifyApp:
     Type: AWS::Amplify::App
     Properties:
-      Name: "MyApplication"
+      Name: "demo-messaging-sqssnskinesisiot"
       Repository: !GetAtt CodeCommitRepository.CloneUrlHttp
-      OAuthToken: "" # For CodeCommit, this is not required. Placeholder for GitHub or other Git providers.
+      OauthToken: "" # For CodeCommit, this is not required. Placeholder for GitHub or other Git providers.
       IAMServiceRole: !GetAtt AmplifyServiceRole.Arn
       EnvironmentVariables:
         - Name: "ENV_VAR_NAME"
