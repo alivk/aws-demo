@@ -1,7 +1,11 @@
-AWSTemplateFormatVersion: "2010-09-09"
-Description: Advanced Developing on AWS - Lab 4 Template
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Author: Alick Li
+  Purpose: Class Demostration
+  Info: 
+  This yaml template is used to support messaging demo
 Parameters:
-
 Resources:
   LambdaKinesisToSQSRole:
     Type: "AWS::IAM::Role"
