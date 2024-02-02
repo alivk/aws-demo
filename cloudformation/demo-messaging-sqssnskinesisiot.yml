@@ -327,7 +327,7 @@ Resources:
       Name: "MyApplication"
       Repository: !GetAtt CodeCommitRepository.CloneUrlHttp
       OAuthToken: "" # For CodeCommit, this is not required. Placeholder for GitHub or other Git providers.
-      IAMServiceRoleArn: !GetAtt AmplifyServiceRole.Arn
+      IAMServiceRole: !GetAtt AmplifyServiceRole.Arn
       EnvironmentVariables:
         - Name: "ENV_VAR_NAME"
           Value: "example_value"
