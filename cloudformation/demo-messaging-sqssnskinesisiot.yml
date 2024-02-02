@@ -298,10 +298,10 @@ Resources:
   CodeCommitRepository:
     Type: AWS::CodeCommit::Repository
     Properties:
-      RepositoryName: !Ref AppName
-      RepositoryDescription: "Repository for demo messaging application."
+      RepositoryName: "demo-messaging-sqssnskinesisiot"
+      RepositoryDescription: "Code repository for my application"
 
-  FrontAppAmplifyRole:
+  AmplifyServiceRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -311,35 +311,26 @@ Resources:
             Principal:
               Service: "amplify.amazonaws.com"
             Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: "AmplifyAccessPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "codecommit:GitPull"
+                Resource: !GetAtt CodeCommitRepository.Arn
 
-  FrontAppAmplifyRolePolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: !Ref AppRolePolicyName
-      Roles:
-        - !Ref FrontAppAmplifyRole
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: "Allow"
-            Action: "codecommit:GitPull"
-            Resource: !GetAtt CodeCommitRepository.Arn
-
-  FrontAppAmplifyApp:
+  AmplifyApp:
     Type: AWS::Amplify::App
     Properties:
-      Name: !Ref AppName
-      IAMServiceRoleArn: !GetAtt FrontAppAmplifyRole.Arn
+      Name: "MyApplication"
       Repository: !GetAtt CodeCommitRepository.CloneUrlHttp
-
-  FrontAppAmplifyBranch:
-    Type: AWS::Amplify::Branch
-    Properties:
-      AppId: !GetAtt FrontAppAmplifyApp.AppId
-      BranchName: !Ref AppBranchName
-      EnableAutoBuild: true
-      EnablePullRequestPreview: true
-
+      OAuthToken: "" # For CodeCommit, this is not required. Placeholder for GitHub or other Git providers.
+      IAMServiceRoleArn: !GetAtt AmplifyServiceRole.Arn
+      EnvironmentVariables:
+        - Name: "ENV_VAR_NAME"
+          Value: "example_value"
 Outputs:
   CognitoIdentityPoolId:
     Description: Cognito.IdentityPoolId
@@ -359,9 +350,9 @@ Outputs:
   TopicARN:
     Description: SNS.TopicARN
     Value: !Ref microservicesDrawTopic
-  GitCloneUrl:
-    Description: "Git clone URL for the repository"
-    Value: !GetAtt CodeCommitRepository.CloneUrlSsh
+  CodeCommitRepositoryURL:
+    Description: "URL of the CodeCommit Repository"
+    Value: !GetAtt CodeCommitRepository.CloneUrlHttp
   AmplifyAppURL:
     Description: "URL of the hosted Amplify website"
-    Value: !GetAtt FrontAppAmplifyApp.DefaultDomain
+    Value: !GetAtt AmplifyApp.DefaultDomain
