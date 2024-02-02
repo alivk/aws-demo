@@ -5,7 +5,6 @@ Description: >
   Purpose: Class Demostration
   Info: 
   This yaml template is used to support messaging demo
-Parameters:
 Resources:
   LambdaKinesisToSQSRole:
     Type: "AWS::IAM::Role"
@@ -302,14 +301,3 @@ Outputs:
   CognitoIdentityPoolId:
     Description: Cognito.IdentityPoolId
     Value: !Ref CIPMessageDraw
-
-  AWSAccessKey:
-    Value: !Ref AWSAccessKey
-  AWSSecretAccessKey:
-    Value: !GetAtt AWSAccessKey.SecretAccessKey
-
-  AccountID:
-    Value: !Ref AWS::AccountId
-
-  Region:
-    Value: !Ref AWS::Region
