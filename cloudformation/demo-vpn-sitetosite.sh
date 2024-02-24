@@ -20,14 +20,9 @@ aws cloudformation create-stack \
   --template-body file://"$stack_name".yml \
   --capabilities CAPABILITY_NAMED_IAM \
   --parameters \
-    ParameterKey=KeyName,ParameterValue=dev \
-    ParameterKey=RoleName,ParameterValue=ROLE-SSMAdminAccess \
-    ParameterKey=LabVPCCIDR,ParameterValue=10.0.0.0/16 \
-    ParameterKey=PublicSubnet1Param,ParameterValue=10.0.10.0/24 \
-    ParameterKey=PublicSubnet2Param,ParameterValue=10.0.15.0/24 \
-    ParameterKey=PrivateSubnet1Param,ParameterValue=10.0.50.0/24 \
-    ParameterKey=PrivateSubnet2Param,ParameterValue=10.0.55.0/24 \
-    ParameterKey=DBPassword,ParameterValue=labpassword
+    ParameterKey=RDPaddress,ParameterValue=132.147.100.0/24 \
+    ParameterKey=resourcePassword,ParameterValue=PleaseChangeToYourPassword \
+    ParameterKey=domainName,ParameterValue=examplecorp.com
 
 # Step 04: Waiting for CloudFormation stack creation to complete
 
