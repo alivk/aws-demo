@@ -16,11 +16,11 @@ Parameters:
     # Default: /aws/service/ami-windows-latest/Windows_Server-2019-English-Base
   domainName:
     Type: String
-    Default: example.com
+    Default: examplecorp.com
   resourcePassword:
     Type: String
     NoEcho: true
-    Default: hh5mXQH!Db
+    Default: PleaseChangeToYourPassword
   RDPaddress:
     Type: String
     Default: 132.147.100.0/24
