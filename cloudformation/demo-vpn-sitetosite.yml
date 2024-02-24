@@ -837,6 +837,10 @@ Resources:
             Action:
               - ssm:*Parameter*
             Resource: "arn:aws:ssm:*:*:parameter/lab-*"
+          - Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: '*'  
 
 #  domainHandle:
 #    Type: AWS::CloudFormation::WaitConditionHandle
